@@ -3,9 +3,9 @@
 import json
 
 import pandas as pd
+from test_modelo_pipeline import sintetico
 
 from exoplanetas import analise, dados, pipeline, site
-from tests.test_modelo_pipeline import sintetico
 
 
 def _com_um_planeta_radial() -> pd.DataFrame:
