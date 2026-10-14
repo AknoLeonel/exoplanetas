@@ -1,0 +1,653 @@
+.painel {
+  position: relative;
+  border-radius: 14px;
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  padding: 20px;
+}
+
+.cartao {
+  border-radius: 14px;
+  padding: 18px 20px;
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  min-height: 112px;
+}
+
+.cartao .valor {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cartao .rotulo {
+  display: block;
+  color: var(--texto-2);
+  font-size: 0.9rem;
+}
+
+.cartao .detalhe {
+  display: block;
+  margin-top: 4px;
+  color: var(--texto-3);
+  font-size: 0.8rem;
+}
+
+/* ---------- Entrada, saída e troca de conteúdo ---------- */
+/* Estados guiados por atributo: transições (não keyframes) podem ser interrompidas no meio. */
+[data-anim] {
+  transition:
+    opacity var(--dur-entrada) var(--curva-entrada),
+    transform var(--dur-entrada) var(--curva-entrada);
+}
+
+[data-anim="entrando"] {
+  opacity: 0;
+  transform: translateY(var(--deslocamento-entrada));
+}
+
+[data-anim="pronto"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* A saída é mais curta e se move menos que a entrada: a atenção já foi para o que chega. */
+[data-anim="saindo"] {
+  opacity: 0;
+  transform: translateY(var(--deslocamento-saida));
+  transition:
+    opacity var(--dur-saida) var(--curva-saida),
+    transform var(--dur-saida) var(--curva-saida);
+}
+
+/* Troca de skeleton por conteúdo sobrepõe os dois para o layout não pular. */
+.troca {
+  display: grid;
+}
+
+.troca > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.troca > [data-anim="saindo"] {
+  pointer-events: none;
+}
+
+/* ---------- Skeleton ---------- */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--sk-base);
+}
+
+.skeleton.texto {
+  height: 14px;
+  border-radius: 6px;
+}
+
+.skeleton.linha {
+  height: 36px;
+}
+
+.skeleton.bloco-grafico {
+  height: min(62vw, 520px);
+  min-height: 280px;
+}
+
+/* Altura aproximada da tabela de 20 linhas, para o conteúdo não empurrar a página quando chega. */
+.skeleton.bloco-tabela {
+  height: 860px;
+}
+
+.skeleton.bloco-barras {
+  height: 360px;
+}
+
+.skeleton.bloco-lista {
+  height: 220px;
+}
+
+.skeleton-grupo {
+  display: grid;
+  gap: 12px;
+}
+
+.skeleton-grupo.filtros {
+  grid-auto-flow: column;
+  grid-auto-columns: 112px;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 20%, var(--sk-brilho) 50%, transparent 80%);
+    transform: translateX(-100%);
+    animation: brilho 1.4s linear infinite;
+  }
+
+  @keyframes brilho {
+    to {
+      transform: translateX(100%);
+    }
+  }
+}
+
+/* ---------- Progresso ---------- */
+.progresso-global {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 3px;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-saida) var(--curva-saida);
+}
+
+.progresso-global[data-estado="ativo"] {
+  opacity: 1;
+  transition-duration: var(--dur-rapida);
+}
+
+.progresso-global > span {
+  display: block;
+  height: 100%;
+  background: var(--destaque);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform var(--dur-entrada) var(--curva-entrada);
+}
+
+.progresso-secao {
+  height: 3px;
+  margin-top: 14px;
+  border-radius: 2px;
+  background: var(--sk-base);
+  overflow: hidden;
+}
+
+.progresso-secao > span {
+  display: block;
+  height: 100%;
+  background: var(--destaque);
+  transform-origin: left center;
+  transform: scaleX(var(--fracao, 0));
+  transition: transform var(--dur-entrada) var(--curva-entrada);
+}
+
+.progresso-secao[data-indeterminado] > span {
+  transform: scaleX(0.35);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .progresso-secao[data-indeterminado] > span {
+    animation: varredura 1.2s var(--curva-entrada) infinite;
+  }
+
+  @keyframes varredura {
+    from {
+      transform: translateX(-100%) scaleX(0.35);
+    }
+    to {
+      transform: translateX(300%) scaleX(0.35);
+    }
+  }
+}
+
+/* ---------- Erro ---------- */
+.erro {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--superficie-2);
+  box-shadow: inset 3px 0 0 var(--erro);
+}
+
+.erro strong {
+  color: var(--erro);
+}
+
+/* ---------- Botões e controles ---------- */
+.botao {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: var(--texto);
+  color: var(--superficie);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--dur-instantanea) var(--curva-entrada);
+}
+
+.botao:active {
+  transform: scale(0.97);
+}
+
+.botao.secundario {
+  background: var(--superficie-2);
+  color: var(--texto);
+  box-shadow: var(--sombra);
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.fichas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ficha {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  color: var(--texto-2);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: var(--sombra);
+  transition:
+    background-color var(--dur-rapida) var(--curva-entrada),
+    color var(--dur-rapida) var(--curva-entrada);
+}
+
+.ficha[aria-pressed="true"] {
+  background: var(--texto);
+  color: var(--superficie);
+}
+
+.ficha .ponto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--superficie);
+}
+
+.ficha .n {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.controle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--texto-2);
+}
+
+.controle input[type="range"] {
+  width: 140px;
+  accent-color: var(--destaque);
+}
+
+.controle input[type="search"] {
+  width: 200px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  box-shadow: var(--sombra);
+  color: var(--texto);
+  font: inherit;
+}
+
+.controle output {
+  min-width: 3ch;
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+}
+
+/* ---------- Gráfico período × raio ---------- */
+.area-grafico {
+  position: relative;
+  height: min(62vw, 520px);
+  min-height: 280px;
+  touch-action: pan-y;
+}
+
+.area-grafico canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.resumo-grafico {
+  margin-top: 10px;
+  color: var(--texto-3);
+  font-size: 0.85rem;
+}
+
+/* ---------- Tooltip ---------- */
+.tooltip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  pointer-events: none;
+  /* A posição acompanha o cursor sem animar; só o aparecer e sumir têm transição. */
+  will-change: transform;
+}
+
+.tooltip-corpo {
+  min-width: 170px;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--superficie);
+  box-shadow: var(--sombra-flutuante);
+  font-size: 0.82rem;
+  transform-origin: var(--origem, 0 0);
+  transition:
+    opacity var(--dur-rapida) var(--curva-entrada),
+    transform var(--dur-rapida) var(--curva-entrada);
+}
+
+.tooltip[data-visivel="false"] .tooltip-corpo {
+  opacity: 0;
+  transform: scale(0.96);
+  transition-duration: var(--dur-instantanea);
+  transition-timing-function: var(--curva-saida);
+}
+
+.tooltip strong {
+  display: block;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+.tooltip dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  gap: 2px 14px;
+  margin: 6px 0 0;
+}
+
+.tooltip dt {
+  color: var(--texto-3);
+}
+
+.tooltip dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+
+.tooltip .chave {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+
+/* ---------- Tabela ---------- */
+.tabela-wrap {
+  margin-top: 28px;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+caption {
+  padding-bottom: 10px;
+  text-align: left;
+  color: var(--texto-2);
+}
+
+th,
+td {
+  padding: 9px 12px;
+  text-align: right;
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--grade);
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+th button {
+  all: unset;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--texto-2);
+}
+
+th button:hover {
+  color: var(--texto);
+}
+
+th button:focus-visible {
+  outline: 2px solid var(--destaque);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+th[aria-sort] button::after {
+  content: " ↕";
+  opacity: 0.4;
+}
+
+th[aria-sort="ascending"] button::after {
+  content: " ↑";
+  opacity: 1;
+}
+
+th[aria-sort="descending"] button::after {
+  content: " ↓";
+  opacity: 1;
+}
+
+tbody[data-anim] {
+  transition-duration: var(--dur-rapida);
+}
+
+.vazio {
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--texto-2);
+}
+
+.mais {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ---------- Descobertas por ano ---------- */
+.grafico-barras {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.grafico-barras text {
+  fill: var(--texto-3);
+  font-size: 11px;
+  font-family: var(--fonte);
+}
+
+.grafico-barras .grade {
+  stroke: var(--grade);
+  stroke-width: 1;
+}
+
+.grafico-barras .segmento {
+  stroke: var(--superficie);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  transform: scaleY(0);
+  transition: transform var(--dur-barra) var(--curva-entrada);
+}
+
+.grafico-barras[data-visivel="true"] .segmento {
+  transform: scaleY(1);
+}
+
+.grafico-barras .coluna-alvo {
+  fill: transparent;
+}
+
+.grafico-barras .coluna-alvo:hover,
+.grafico-barras .coluna-alvo:focus-visible {
+  fill: var(--grade);
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  color: var(--texto-2);
+}
+
+.legenda .quadro {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 2px;
+}
+
+.nota {
+  margin-top: 12px;
+  color: var(--texto-3);
+  font-size: 0.85rem;
+}
+
+/* ---------- Modelo e barras horizontais ---------- */
+.grade-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.barras {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barras .rotulo-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.barras .rotulo-linha b {
+  font-variant-numeric: tabular-nums;
+}
+
+.barras .trilho {
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 4px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+.barras .preenchimento {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--cor, var(--destaque));
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform var(--dur-barra) var(--curva-entrada);
+}
+
+.barras[data-visivel="true"] .preenchimento {
+  transform: scaleX(var(--v, 0));
+}
+
+.painel h3 {
+  margin-bottom: 2px;
+}
+
+.painel .sub {
+  color: var(--texto-3);
+  font-size: 0.85rem;
+}
+
+/* ---------- Parecidos com a Terra ---------- */
+.lista-terra {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-terra li {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+}
+
+.lista-terra strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.lista-terra dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  gap: 2px 10px;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.lista-terra dt {
+  color: var(--texto-3);
+}
+
+.lista-terra dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

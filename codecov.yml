@@ -1,0 +1,28 @@
+# Cobertura no Codecov: Python e site são medidos à parte (flags) e juntos.
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: 80%
+
+flags:
+  python:
+    paths:
+      - src/
+  site:
+    paths:
+      - site/src/
+
+comment:
+  layout: "reach, diff, flags, files"
+  require_changes: false
+
+ignore:
+  - "site/src/telemetry/provedores/**"
+  - "site/src/app/main.ts"
+  - "site/tests/**"
+  - "tests/**"

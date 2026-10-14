@@ -1,0 +1,93 @@
+/* Tokens: cores, tipografia e movimento. Todo o movimento do site sai daqui. */
+:root {
+  color-scheme: light;
+
+  --superficie: #fcfcfb;
+  --superficie-2: #f3f2ef;
+  --texto: #0b0b0b;
+  --texto-2: #52514e;
+  --texto-3: #6b6a66;
+  --linha: rgb(0 0 0 / 0.1);
+  --grade: rgb(0 0 0 / 0.07);
+  --destaque: #2a78d6;
+  --destaque-texto: #fff;
+  --erro: #b3261e;
+  --sombra: 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06), 0 2px 4px 0 rgb(0 0 0 / 0.04);
+  --sombra-flutuante: 0 0 0 1px rgb(0 0 0 / 0.08), 0 4px 12px -2px rgb(0 0 0 / 0.16), 0 2px 4px 0 rgb(0 0 0 / 0.06);
+  --sk-base: #e8e7e3;
+  --sk-brilho: rgb(255 255 255 / 0.55);
+
+  /* Tamanho do planeta: uma única cor, do claro ao escuro (ordem de grandeza, não identidade). */
+  --classe-terra: #8ecae6;
+  --classe-super-terra: #4aa3d9;
+  --classe-netuno: #2a78d6;
+  --classe-jupiter: #1d54a8;
+  --classe-super-jupiter: #10306b;
+  --deserto: rgb(235 104 52 / 0.12);
+  --deserto-borda: #eb6834;
+
+  /* Método de descoberta: categórica, na ordem fixa da paleta validada. */
+  --metodo-transit: #2a78d6;
+  --metodo-radial-velocity: #eb6834;
+  --metodo-microlensing: #1baf7a;
+  --metodo-imaging: #eda100;
+  --metodo-outros: #8a8a85;
+
+  --fonte: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --fonte-numeros: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Movimento. Entrada mais longa que a saída; curvas fortes, nunca `ease`. */
+  --curva-entrada: cubic-bezier(0.23, 1, 0.32, 1);
+  --curva-saida: cubic-bezier(0.4, 0, 1, 1);
+  --dur-instantanea: 90ms;
+  --dur-rapida: 140ms;
+  --dur-entrada: 260ms;
+  --dur-saida: 160ms;
+  --dur-barra: 520ms;
+  --deslocamento-entrada: 8px;
+  --deslocamento-saida: -4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-tema="claro"])) {
+    color-scheme: dark;
+    --superficie: #131312;
+    --superficie-2: #1d1d1b;
+    --texto: #f0efec;
+    --texto-2: #c3c2b7;
+    --texto-3: #a3a29a;
+    --linha: rgb(255 255 255 / 0.12);
+    --grade: rgb(255 255 255 / 0.08);
+    --destaque: #3987e5;
+    --erro: #f2b8b5;
+    --sombra: 0 0 0 1px rgb(255 255 255 / 0.1);
+    --sombra-flutuante: 0 0 0 1px rgb(255 255 255 / 0.16), 0 8px 24px -4px rgb(0 0 0 / 0.6);
+    --sk-base: #242422;
+    --sk-brilho: rgb(255 255 255 / 0.07);
+    --classe-terra: #274b73;
+    --classe-super-terra: #2f6db5;
+    --classe-netuno: #3987e5;
+    --classe-jupiter: #76afef;
+    --classe-super-jupiter: #b9d6f7;
+    --deserto: rgb(217 89 38 / 0.16);
+    --deserto-borda: #d95926;
+    --metodo-transit: #3987e5;
+    --metodo-radial-velocity: #d95926;
+    --metodo-microlensing: #199e70;
+    --metodo-imaging: #c98500;
+    --metodo-outros: #77776f;
+  }
+}
+
+/* Quem pede menos movimento recebe estados finais direto, sem transição. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instantanea: 0.01ms;
+    --dur-rapida: 0.01ms;
+    --dur-entrada: 0.01ms;
+    --dur-saida: 0.01ms;
+    --dur-barra: 0.01ms;
+    --deslocamento-entrada: 0px;
+    --deslocamento-saida: 0px;
+  }
+}

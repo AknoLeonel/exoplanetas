@@ -1,0 +1,48 @@
+version: 1
+project:
+  name: exoplanetas-site
+
+# lib: lógica pura, sem DOM e sem rede. data: rede e validação. ui: DOM. app: ponto de entrada.
+# telemetry é a única camada que conhece fornecedores (e só em provedores/).
+layers:
+  - name: lib
+    match: [src/lib/**/*.ts]
+  - name: data
+    match: [src/data/**/*.ts]
+  - name: telemetry
+    match: [src/telemetry/*.ts]
+  - name: provedores
+    match: [src/telemetry/provedores/**/*.ts]
+  - name: ui
+    match: [src/ui/**/*.ts]
+  - name: app
+    match: [src/app/**/*.ts]
+
+ruleset:
+  lib: { mayDependOn: [] }
+  data: { mayDependOn: [lib, telemetry] }
+  telemetry: { mayDependOn: [provedores] }
+  provedores: { mayDependOn: [telemetry] }
+  ui: { mayDependOn: [lib, data, telemetry] }
+  app: { mayDependOn: [ui, telemetry, lib, data] }
+
+expectations:
+  - name: lib-nao-usa-pacotes-externos
+    expect: { layer: lib }
+    to:
+      notDependOnPackages: ["**"]
+
+  - name: so-a-telemetria-conhece-os-fornecedores
+    expect: { layer: ui }
+    to:
+      notDependOnPackages: ["@sentry/*", "@datadog/*", "@newrelic/*", "@opentelemetry/*"]
+
+  - name: dados-nao-conhece-os-fornecedores
+    expect: { layer: data }
+    to:
+      notDependOnPackages: ["@sentry/*", "@datadog/*", "@newrelic/*", "@opentelemetry/*"]
+
+  - name: app-nao-conhece-os-fornecedores
+    expect: { layer: app }
+    to:
+      notDependOnPackages: ["@sentry/*", "@datadog/*", "@newrelic/*", "@opentelemetry/*"]
