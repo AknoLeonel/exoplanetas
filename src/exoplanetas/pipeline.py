@@ -10,6 +10,7 @@ from pathlib import Path
 from exoplanetas import analise, dados, graficos, modelo
 
 SAIDA = dados.RAIZ / "reports"
+SITE = dados.RAIZ / "site"
 MODELO_FINAL = "Gradient boosting (todas as variáveis)"
 
 
@@ -23,7 +24,30 @@ def _arredondar(obj, casas: int = 4):
     return obj
 
 
-def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = True) -> dict:
+def _sig(x: float, digitos: int = 4) -> float | None:
+    """Arredonda para `digitos` algarismos significativos (deixa o JSON do site leve)."""
+    if x is None or x != x:  # NaN
+        return None
+    return float(f"{x:.{digitos}g}")
+
+
+def dados_do_site(df) -> dict:
+    """Planetas com período e raio, em formato de colunas, para o gráfico do site.
+
+    `medido` diz se o raio veio de trânsito (medido) ou de uma estimativa do arquivo.
+    """
+    base = df[df["pl_orbper"].gt(0) & df["pl_rade"].gt(0)].sort_values("pl_name")
+    medido = base["discoverymethod"].eq("Transit")
+    return {
+        "colunas": ["nome", "metodo", "ano", "periodo", "raio", "massa", "medido"],
+        "linhas": [
+            [r.pl_name, r.discoverymethod, int(r.disc_year), _sig(r.pl_orbper), _sig(r.pl_rade), _sig(r.pl_bmasse), bool(m)]
+            for r, m in zip(base.itertuples(index=False), medido, strict=True)
+        ],
+    }
+
+
+def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = True, site: Path | None = SITE) -> dict:
     df = dados.carregar(csv)
     meta_path = csv.parent / "metadados.json"
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
@@ -72,6 +96,16 @@ def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = 
 
     saida.mkdir(parents=True, exist_ok=True)
     (saida / "metricas.json").write_text(json.dumps(resultado, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    if site is not None:
+        pasta_site = site / "dados"
+        pasta_site.mkdir(parents=True, exist_ok=True)
+        (pasta_site / "metricas.json").write_text(json.dumps(resultado, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        (pasta_site / "descobertas.json").write_text(
+            json.dumps({"anos": [int(a) for a in tabela.index], "series": {k: [int(v) for v in tabela[k]] for k in tabela.columns}}),
+            encoding="utf-8",
+        )
+        (pasta_site / "planetas.json").write_text(json.dumps(dados_do_site(df), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     if figuras:
         transito = analise.com_raio_medido(df)

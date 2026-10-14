@@ -30,4 +30,4 @@ jobs:
         if: hashFiles('data/exoplanetas.csv') != ''
         run: |
           python -m exoplanetas.pipeline
-          git diff --exit-code -- reports/metricas.json
+          git diff --exit-code -- reports/metricas.json site/dados/

@@ -96,7 +96,8 @@ def test_pipeline_gera_metricas_e_figuras(tmp_path):
     sintetico().to_csv(csv, index=False)
     (pasta_dados / "metadados.json").write_text(json.dumps({"coletado_em": "2026-01-01T00:00:00Z"}))
     saida = tmp_path / "reports"
-    r = pipeline.executar(csv=csv, saida=saida)
+    pasta_site = tmp_path / "site"
+    r = pipeline.executar(csv=csv, saida=saida, site=pasta_site)
     salvo = json.loads((saida / "metricas.json").read_text(encoding="utf-8"))
     assert salvo == r
     assert r["dados"]["planetas"] == 300
@@ -106,3 +107,25 @@ def test_pipeline_gera_metricas_e_figuras(tmp_path):
     figuras = sorted(p.name for p in (saida / "figuras").iterdir())
     assert len(figuras) == 8
     assert all(p.stat().st_size > 10_000 for p in (saida / "figuras").iterdir())
+    planetas = json.loads((pasta_site / "dados" / "planetas.json").read_text(encoding="utf-8"))
+    assert planetas["colunas"][0] == "nome"
+    assert len(planetas["linhas"]) == 300
+    assert all(linha[-1] is True for linha in planetas["linhas"])
+    descobertas = json.loads((pasta_site / "dados" / "descobertas.json").read_text(encoding="utf-8"))
+    assert sum(map(sum, descobertas["series"].values())) == 300
+    assert json.loads((pasta_site / "dados" / "metricas.json").read_text(encoding="utf-8")) == r
+
+
+def test_dados_do_site_marca_raios_estimados_e_descarta_incompletos():
+    df = sintetico(n=4)
+    df.loc[1, "discoverymethod"] = "Radial Velocity"
+    df.loc[2, "pl_orbper"] = np.nan
+    linhas = pipeline.dados_do_site(df)["linhas"]
+    assert [linha[0] for linha in linhas] == ["P0", "P1", "P3"]
+    assert [linha[-1] for linha in linhas] == [True, False, True]
+
+
+def test_sig_arredonda_e_trata_nan():
+    assert pipeline._sig(123456.0) == 123500.0
+    assert pipeline._sig(0.00123456) == 0.001235
+    assert pipeline._sig(float("nan")) is None
