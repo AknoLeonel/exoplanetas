@@ -113,7 +113,8 @@ def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = 
             json.dumps({"anos": [int(a) for a in tabela.index], "series": {k: [int(v) for v in tabela[k]] for k in tabela.columns}}),
             encoding="utf-8",
         )
-        (pasta_site / "planetas.json").write_text(json.dumps(dados_do_site(df), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        planetas = json.dumps(dados_do_site(df), ensure_ascii=False, separators=(",", ":"))
+        (pasta_site / "planetas.json").write_text(planetas, encoding="utf-8")
 
     if figuras:
         transito = analise.com_raio_medido(df)
