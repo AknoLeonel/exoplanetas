@@ -90,4 +90,3 @@ def mais_proximos_parecidos_com_a_terra(df: pd.DataFrame, n: int = 5) -> pd.Data
     filtro = t["pl_rade"].lt(1.6) & t["pl_insol"].between(0.25, 2.0) & t["sy_dist"].notna()
     cols = ["pl_name", "pl_rade", "pl_insol", "pl_eqt", "sy_dist"]
     return t.loc[filtro, cols].sort_values("sy_dist").head(n).reset_index(drop=True)
-
