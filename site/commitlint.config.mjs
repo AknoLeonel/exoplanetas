@@ -1,4 +1,5 @@
-// Conventional Commits, com as regras do AGENTS.md: tipos em português do fluxo e assunto em minúsculas.
+// Conventional Commits, com as regras do AGENTS.md. O assunto não pode começar com maiúscula (regra padrão
+// de subject-case), mas siglas no meio, como NASA e CI, são permitidas.
 export default {
   extends: ["@commitlint/config-conventional"],
   rules: {
@@ -7,7 +8,6 @@ export default {
       "always",
       ["feat", "fix", "docs", "test", "chore", "data", "style", "refactor", "perf", "ci", "build"],
     ],
-    "subject-case": [2, "always", "lower-case"],
     "subject-full-stop": [2, "never", "."],
     "header-max-length": [2, "always", 100],
     "body-max-line-length": [0],
