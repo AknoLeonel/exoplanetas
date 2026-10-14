@@ -1,0 +1,82 @@
+"""Dados do site: o JSON que a página lê precisa bater com o DataFrame."""
+
+import json
+
+import pandas as pd
+
+from exoplanetas import pipeline, site
+from tests.test_modelo_pipeline import sintetico
+
+
+def _com_um_planeta_radial() -> pd.DataFrame:
+    df = sintetico(n=30)
+    radial = df.iloc[[0]].copy()
+    radial["pl_name"] = "Radial b"
+    radial["discoverymethod"] = "Radial Velocity"
+    sem_periodo = df.iloc[[1]].copy()
+    sem_periodo["pl_name"] = "Sem periodo b"
+    sem_periodo["pl_orbper"] = float("nan")
+    return pd.concat([df, radial, sem_periodo], ignore_index=True)
+
+
+def test_planetas_so_de_transito_com_periodo_e_raio():
+    df = _com_um_planeta_radial()
+    out = site.planetas_com_raio(df)
+    nomes = [linha[0] for linha in out["linhas"]]
+    assert out["colunas"] == site.COLUNAS_PLANETAS
+    assert "Radial b" not in nomes
+    assert "Sem periodo b" not in nomes
+    assert len(nomes) == 30  # só os 30 originais: o radial e o sem período ficaram de fora
+    assert nomes == sorted(nomes)
+    assert all(len(linha) == len(site.COLUNAS_PLANETAS) for linha in out["linhas"])
+
+
+def test_massa_so_quando_medida_e_nan_vira_none():
+    df = sintetico(n=6)
+    df.loc[0, "pl_bmassprov"] = "M-R relationship"
+    df.loc[1, "pl_eqt"] = float("nan")
+    out = site.planetas_com_raio(df)
+    por_nome = {linha[0]: linha for linha in out["linhas"]}
+    idx_massa = site.COLUNAS_PLANETAS.index("massa")
+    idx_temp = site.COLUNAS_PLANETAS.index("temperatura")
+    assert por_nome["P0"][idx_massa] is None
+    assert por_nome["P2"][idx_massa] is not None
+    assert por_nome["P1"][idx_temp] is None
+
+
+def test_arredondamento():
+    assert site._valor(float("nan"), 2) is None
+    assert site._valor(None, 2) is None
+    assert site._valor(2.0, None) == 2
+    assert site._valor(1.23456, 2) == 1.23
+    assert site._valor(554.6, 0) == 555
+    assert isinstance(site._valor(554.6, 0), int)
+
+
+def test_descobertas_por_ano_e_metodo():
+    out = site.descobertas(sintetico(n=60))
+    assert out["anos"] == list(range(out["anos"][0], out["anos"][-1] + 1))
+    assert set(out["metodos"]) == {"Transit"}
+    assert sum(out["metodos"]["Transit"]) == 60
+    assert all(len(v) == len(out["anos"]) for v in out["metodos"].values())
+    assert out["nomes"] == {"Transit": "Trânsito"}
+
+
+def test_gravar_cria_arquivos_json_validos(tmp_path):
+    arquivos = site.gerar(sintetico(n=20), {"dados": {"planetas": 20}})
+    site.gravar(arquivos, tmp_path / "novo" / "dados")
+    salvos = {p.name for p in (tmp_path / "novo" / "dados").iterdir()}
+    assert salvos == {"planetas.json", "descobertas.json", "metricas.json"}
+    metricas = json.loads((tmp_path / "novo" / "dados" / "metricas.json").read_text(encoding="utf-8"))
+    assert metricas == {"dados": {"planetas": 20}}
+
+
+def test_pipeline_grava_dados_do_site_quando_pedido(tmp_path):
+    pasta_dados = tmp_path / "data"
+    pasta_dados.mkdir()
+    csv = pasta_dados / "exoplanetas.csv"
+    sintetico().to_csv(csv, index=False)
+    destino = tmp_path / "site"
+    r = pipeline.executar(csv=csv, saida=tmp_path / "reports", figuras=False, pasta_site=destino)
+    assert json.loads((destino / "metricas.json").read_text(encoding="utf-8")) == r
+    assert (destino / "planetas.json").stat().st_size > 1_000

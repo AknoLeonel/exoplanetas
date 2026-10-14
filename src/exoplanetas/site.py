@@ -1,0 +1,69 @@
+"""Dados do site: tabelas compactas em JSON, derivadas dos mesmos DataFrames do pipeline."""
+
+import json
+from pathlib import Path
+
+import pandas as pd
+
+from exoplanetas import analise, dados
+
+SITE_DADOS = dados.RAIZ / "site" / "public" / "dados"
+
+# Ordem das colunas de planetas.json: o site lê cada linha por posição.
+COLUNAS_PLANETAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia"]
+CASAS = {"periodo": 4, "raio": 3, "massa": 2, "temperatura": 0, "distancia": 1}
+
+
+def _valor(x, casas: int | None):
+    """Número JSON: NaN vira None e floats são arredondados."""
+    if x is None or pd.isna(x):
+        return None
+    if casas is None:
+        return int(x)
+    return round(float(x), casas) if casas else round(float(x))
+
+
+def planetas_com_raio(df: pd.DataFrame) -> dict:
+    """Planetas de trânsito com raio e período (os que entram no gráfico período × raio)."""
+    t = analise.com_raio_medido(df)
+    t = t[t["pl_orbper"].notna()].sort_values("pl_name")
+    t = t.assign(massa=t["pl_bmasse"].where(t["pl_bmassprov"] == "Mass"))
+    linhas = [
+        [
+            str(r.pl_name),
+            _valor(r.disc_year, None),
+            _valor(r.pl_orbper, CASAS["periodo"]),
+            _valor(r.pl_rade, CASAS["raio"]),
+            _valor(r.massa, CASAS["massa"]),
+            _valor(r.pl_eqt, CASAS["temperatura"]),
+            _valor(r.sy_dist, CASAS["distancia"]),
+        ]
+        for r in t.itertuples()
+    ]
+    return {"colunas": COLUNAS_PLANETAS, "linhas": linhas}
+
+
+def descobertas(df: pd.DataFrame) -> dict:
+    """Descobertas por ano e método, para o gráfico de barras empilhadas."""
+    tabela = analise.descobertas_por_ano(df)
+    return {
+        "anos": [int(a) for a in tabela.index],
+        "metodos": {str(metodo): [int(v) for v in tabela[metodo]] for metodo in tabela.columns},
+        "nomes": {m: dados.NOMES_METODOS[m] for m in tabela.columns},
+    }
+
+
+def gerar(df: pd.DataFrame, metricas: dict) -> dict[str, dict]:
+    """Todos os arquivos de dados do site, indexados pelo nome do arquivo."""
+    return {
+        "planetas.json": planetas_com_raio(df),
+        "descobertas.json": descobertas(df),
+        "metricas.json": metricas,
+    }
+
+
+def gravar(arquivos: dict[str, dict], pasta: Path = SITE_DADOS) -> None:
+    pasta.mkdir(parents=True, exist_ok=True)
+    for nome, conteudo in arquivos.items():
+        texto = json.dumps(conteudo, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        (pasta / nome).write_text(texto + "\n", encoding="utf-8")

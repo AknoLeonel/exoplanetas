@@ -1,13 +1,14 @@
 """Roda tudo: python -m exoplanetas.pipeline
 
-Gera reports/metricas.json e reports/figuras/*-{claro,escuro}.png.
+Gera reports/metricas.json, reports/figuras/*-{claro,escuro}.png e os dados do site
+(site/public/dados/*.json).
 Todo número citado no README vem do metricas.json.
 """
 
 import json
 from pathlib import Path
 
-from exoplanetas import analise, dados, graficos, modelo
+from exoplanetas import analise, dados, graficos, modelo, site
 
 SAIDA = dados.RAIZ / "reports"
 MODELO_FINAL = "Gradient boosting (todas as variáveis)"
@@ -23,7 +24,7 @@ def _arredondar(obj, casas: int = 4):
     return obj
 
 
-def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = True) -> dict:
+def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = True, pasta_site: Path | None = None) -> dict:
     df = dados.carregar(csv)
     meta_path = csv.parent / "metadados.json"
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
@@ -73,6 +74,9 @@ def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = 
     saida.mkdir(parents=True, exist_ok=True)
     (saida / "metricas.json").write_text(json.dumps(resultado, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
+    if pasta_site is not None:
+        site.gravar(site.gerar(df, resultado), pasta_site)
+
     if figuras:
         transito = analise.com_raio_medido(df)
         transito = transito[transito["pl_orbper"].notna()]
@@ -87,6 +91,6 @@ def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = 
 
 
 if __name__ == "__main__":
-    r = executar()
+    r = executar(pasta_site=site.SITE_DADOS)
     final = r["modelo"]["resultados"][MODELO_FINAL]
     print(f"{r['dados']['planetas']} planetas · modelo: erro mediano {final['erro_percentual_mediano']:.1f}% · R² {final['r2_log']:.3f}")
