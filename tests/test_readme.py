@@ -34,7 +34,7 @@ def test_readme_cita_os_numeros_do_metricas_json():
         f"{milhar(mod['estrelas'])} estrelas",
         f"R ∝ M^{mod['lei_de_potencia']['expoente']:.2f}".replace(".", ","),
     ]
-    for nome, r in mod["resultados"].items():
+    for r in mod["resultados"].values():
         esperados += [pct(r["erro_percentual_mediano"]), pct(r["dentro_de_20pct"]), f"{r['r2_log']:.2f}".replace(".", ",")]
     for ano, v in desc["dois_maiores_anos"].items():
         sufixo = f"de {ano}" if ano == str(desc["ano_de_pico"]) else f"planetas de {ano}"
