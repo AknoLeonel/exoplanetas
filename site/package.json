@@ -1,0 +1,56 @@
+{
+  "name": "exoplanetas-site",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Vitrine interativa dos exoplanetas confirmados do NASA Exoplanet Archive",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
+    "arch": "arch-contract check",
+    "knip": "knip",
+    "test": "vitest run",
+    "test:cobertura": "vitest run --coverage",
+    "e2e": "playwright test",
+    "mutacao": "stryker run",
+    "commitlint": "commitlint --config commitlint.config.mjs",
+    "qualidade": "npm run lint && npm run typecheck && npm run arch && npm run knip"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@playwright/test": "^1.64.1",
+    "@stryker-mutator/core": "^10.0.0",
+    "@stryker-mutator/vitest-runner": "^10.0.0",
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^4.1.11",
+    "arch-contract": "^0.3.0",
+    "happy-dom": "^21.0.1",
+    "knip": "^6.41.0",
+    "typescript": "~5.9",
+    "vite": "^8.3.4",
+    "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "@datadog/browser-rum": "^7.16.0",
+    "@newrelic/browser-agent": "^1.324.0",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
+    "@opentelemetry/instrumentation": "^0.223.0",
+    "@opentelemetry/instrumentation-document-load": "^0.68.0",
+    "@opentelemetry/instrumentation-fetch": "^0.223.0",
+    "@opentelemetry/resources": "^2.12.0",
+    "@opentelemetry/sdk-trace-base": "^2.12.0",
+    "@opentelemetry/sdk-trace-web": "^2.12.0",
+    "@sentry/browser": "^11.7.0",
+    "web-vitals": "^6.2.3"
+  }
+}

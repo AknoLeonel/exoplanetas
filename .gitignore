@@ -9,7 +9,7 @@ node_modules/
 dist/
 coverage/
 .stryker-tmp/
-reports/mutation/
+site/reports/
 playwright-report/
 test-results/
 .env

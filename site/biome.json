@@ -1,0 +1,28 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true, "root": ".." },
+  "files": {
+    "includes": [
+      "**",
+      "!public/dados",
+      "!coverage",
+      "!dist",
+      "!reports",
+      "!.stryker-tmp",
+      "!playwright-report",
+      "!test-results"
+    ]
+  },
+  "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 120 },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": { "useConst": "error", "noNonNullAssertion": "error" },
+      "suspicious": { "noConsole": "warn" },
+      "correctness": { "noUnusedImports": "error", "noUnusedVariables": "error" }
+    }
+  },
+  "javascript": { "formatter": { "quoteStyle": "double", "semicolons": "always" } },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } }
+}
