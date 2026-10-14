@@ -41,7 +41,15 @@ def dados_do_site(df) -> dict:
     return {
         "colunas": ["nome", "metodo", "ano", "periodo", "raio", "massa", "medido"],
         "linhas": [
-            [r.pl_name, r.discoverymethod, int(r.disc_year), _sig(r.pl_orbper), _sig(r.pl_rade), _sig(r.pl_bmasse), bool(m)]
+            [
+                r.pl_name,
+                r.discoverymethod,
+                int(r.disc_year),
+                _sig(r.pl_orbper),
+                _sig(r.pl_rade),
+                _sig(r.pl_bmasse),
+                bool(m),
+            ]
             for r, m in zip(base.itertuples(index=False), medido, strict=True)
         ],
     }
