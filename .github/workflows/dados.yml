@@ -1,0 +1,49 @@
+name: Coletar dados da NASA
+
+# Roda quando o próprio coletor muda numa branch, todo mês e sob demanda.
+# Na branch atual, salva os dados nela. A partir da main (agenda ou manual),
+# cria a branch data/atualizacao-AAAA-MM-DD para virar PR, nunca commita na main.
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - scripts/coletar_dados.py
+      - .github/workflows/dados.yml
+  schedule:
+    - cron: "41 9 1 * *"   # dia 1, 06:41 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dados-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Baixar planetas confirmados
+        run: python scripts/coletar_dados.py
+      - name: Salvar em branch
+        run: |
+          git add data/exoplanetas.csv
+          if git diff --cached --quiet; then echo "Os dados não mudaram."; exit 0; fi
+          git add data/metadados.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            BRANCH="data/atualizacao-$(date -u +%Y-%m-%d)"
+            git switch -c "$BRANCH"
+          else
+            BRANCH="${GITHUB_REF_NAME}"
+          fi
+          git commit -m "data: atualiza planetas confirmados da NASA"
+          git push origin "HEAD:$BRANCH"
+          echo "Dados salvos na branch $BRANCH. Abra um PR para a main." >> "$GITHUB_STEP_SUMMARY"
