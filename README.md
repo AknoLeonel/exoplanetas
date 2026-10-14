@@ -98,6 +98,23 @@ pytest                             # testes, com cobertura mínima de 90%
 
 Para atualizar os dados: Actions → **Coletar dados da NASA** → Run workflow. O workflow abre uma branch com o CSV novo, para revisar por PR.
 
+## Site interativo
+
+Em [`site/`](site/) há uma vitrine web dos resultados (Vite + TypeScript): o diagrama período × raio com hover, filtros e tabela, as descobertas por ano e os resultados do modelo. Os dados vêm do pipeline (`site/public/dados/*.json`), então nenhum número é digitado à mão.
+
+```bash
+python -m exoplanetas.pipeline     # regenera também site/public/dados/
+cd site
+npm ci
+npm run dev                        # http://localhost:5173
+npm run qualidade                  # Biome, TypeScript, arch-contract e Knip
+npm test                           # Vitest (unitários e de integração)
+npm run e2e                        # Playwright, contra o build
+npm run mutacao                    # Stryker, na lógica pura
+```
+
+**Deploy:** a Vercel publica a `main` e cria uma prévia para cada branch e PR (`vercel.json` na raiz). **Observabilidade:** Sentry, Datadog RUM, New Relic e OpenTelemetry ligam sozinhos quando as variáveis `VITE_*` de [`site/.env.example`](site/.env.example) existem; sem elas, nenhum SDK é baixado.
+
 ## Estrutura
 
 ```
@@ -110,6 +127,8 @@ src/exoplanetas/
   pipeline.py         roda tudo e grava reports/
 tests/                pytest
 reports/              metricas.json e figuras
+site/                 site estático (src/lib, data, ui, telemetry), testes e config de qualidade
+vercel.json           build e cabeçalhos do deploy
 ```
 
 ---

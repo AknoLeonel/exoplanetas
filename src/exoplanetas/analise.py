@@ -4,6 +4,11 @@ import pandas as pd
 
 from exoplanetas.dados import CLASSES_TAMANHO, agrupar_metodo, classificar_tamanho
 
+# O "deserto de Netunos quentes": planetas de 2 a 6 raios terrestres com período menor que 3 dias.
+# O site espelha estes limites (veja site.parametros e o teste de contrato do site).
+DESERTO_PERIODO_DIAS = 3.0
+DESERTO_RAIO = (2.0, 6.0)
+
 
 def descobertas_por_ano(df: pd.DataFrame) -> pd.DataFrame:
     """Tabela ano × método (com 'Outros') com o número de descobertas."""
@@ -61,7 +66,7 @@ def contagem_por_tamanho(df: pd.DataFrame) -> dict[str, int]:
     return {nome: int(classes.get(nome, 0)) for nome, _, _ in CLASSES_TAMANHO}
 
 
-def deserto_netunos_quentes(df: pd.DataFrame, periodo_curto: float = 3.0) -> dict[str, float]:
+def deserto_netunos_quentes(df: pd.DataFrame, periodo_curto: float = DESERTO_PERIODO_DIAS) -> dict[str, float]:
     """Compara a fração de planetas do tamanho de Netuno em órbitas curtas.
 
     Planetas de 2 a 6 raios terrestres são comuns em geral, mas raros com
@@ -70,7 +75,7 @@ def deserto_netunos_quentes(df: pd.DataFrame, periodo_curto: float = 3.0) -> dic
     """
     t = com_raio_medido(df)
     t = t[t["pl_orbper"].notna()]
-    netuno = t["pl_rade"].between(2.0, 6.0, inclusive="left")
+    netuno = t["pl_rade"].between(*DESERTO_RAIO, inclusive="left")
     curto = t["pl_orbper"] < periodo_curto
     frac_geral = float(netuno.mean())
     frac_curto = float(netuno[curto].mean()) if curto.any() else float("nan")
