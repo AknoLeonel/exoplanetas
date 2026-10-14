@@ -50,9 +50,13 @@ export function lerConfiguracao(env: Env, ambiente: string, versao: string): Con
         ? {
             licenseKey: nrChave,
             applicationId: nrApp,
-            accountId: env.VITE_NR_ACCOUNT_ID ?? "",
-            trustKey: env.VITE_NR_TRUST_KEY ?? env.VITE_NR_ACCOUNT_ID ?? "",
-            agentId: env.VITE_NR_AGENT_ID ?? nrApp,
+            accountId: preenchido(env.VITE_NR_ACCOUNT_ID) ? env.VITE_NR_ACCOUNT_ID : "",
+            trustKey: preenchido(env.VITE_NR_TRUST_KEY)
+              ? env.VITE_NR_TRUST_KEY
+              : preenchido(env.VITE_NR_ACCOUNT_ID)
+                ? env.VITE_NR_ACCOUNT_ID
+                : "",
+            agentId: preenchido(env.VITE_NR_AGENT_ID) ? env.VITE_NR_AGENT_ID : nrApp,
           }
         : null,
     otel: preenchido(otelUrl) ? { urlDeTracos: otelUrl } : null,

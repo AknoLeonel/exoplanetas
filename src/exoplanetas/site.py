@@ -1,6 +1,7 @@
 """Dados do site: tabelas compactas em JSON, derivadas dos mesmos DataFrames do pipeline."""
 
 import json
+import math
 from pathlib import Path
 
 import pandas as pd
@@ -53,12 +54,38 @@ def descobertas(df: pd.DataFrame) -> dict:
     }
 
 
+def parametros() -> dict:
+    """Constantes da análise que o site desenha (fronteiras de tamanho e deserto)."""
+    return {
+        "classes": [
+            {"nome": nome, "min": minimo, "max": None if math.isinf(maximo) else maximo} for nome, minimo, maximo in dados.CLASSES_TAMANHO
+        ],
+        "deserto": {
+            "periodo_max": analise.DESERTO_PERIODO_DIAS,
+            "raio_min": analise.DESERTO_RAIO[0],
+            "raio_max": analise.DESERTO_RAIO[1],
+        },
+    }
+
+
+def sem_nan(obj):
+    """Troca NaN e infinitos por None: o JSON do site não aceita `NaN` e o navegador leria `null`."""
+    if isinstance(obj, float) and not math.isfinite(obj):
+        return None
+    if isinstance(obj, dict):
+        return {k: sem_nan(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sem_nan(v) for v in obj]
+    return obj
+
+
 def gerar(df: pd.DataFrame, metricas: dict) -> dict[str, dict]:
     """Todos os arquivos de dados do site, indexados pelo nome do arquivo."""
     return {
         "planetas.json": planetas_com_raio(df),
         "descobertas.json": descobertas(df),
-        "metricas.json": metricas,
+        "metricas.json": sem_nan(metricas),
+        "parametros.json": parametros(),
     }
 
 

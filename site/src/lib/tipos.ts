@@ -32,7 +32,7 @@ interface ParecidoComATerra {
   pl_name: string;
   pl_rade: number;
   pl_insol: number;
-  pl_eqt: number;
+  pl_eqt: number | null;
   sy_dist: number;
 }
 

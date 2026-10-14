@@ -7,7 +7,7 @@ const metricas = {
   descobertas: {},
   deserto_netunos_quentes: {},
   parecidos_com_a_terra_mais_proximos: [],
-  modelo: { resultados: {}, importancia_permutacao: {} },
+  modelo: { resultados: { a: {} }, importancia_permutacao: {} },
 };
 
 describe("lerDescobertas", () => {
@@ -43,7 +43,8 @@ describe("lerMetricas", () => {
     ["parecidos que não é lista", { ...metricas, parecidos_com_a_terra_mais_proximos: {} }],
     ["sem modelo", { ...metricas, modelo: undefined }],
     ["modelo sem resultados", { ...metricas, modelo: { importancia_permutacao: {} } }],
-    ["modelo sem importância", { ...metricas, modelo: { resultados: {} } }],
+    ["modelo com resultados vazios", { ...metricas, modelo: { resultados: {}, importancia_permutacao: {} } }],
+    ["modelo sem importância", { ...metricas, modelo: { resultados: { a: {} } } }],
   ])("rejeita %s", (_n, entrada) => {
     expect(() => lerMetricas(entrada)).toThrow(ErroDados);
   });

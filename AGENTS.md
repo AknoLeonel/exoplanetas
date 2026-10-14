@@ -33,7 +33,7 @@ Instruções obrigatórias para qualquer agente de IA (de qualquer modelo ou fer
 ## Site (`site/`)
 
 - Camadas (verificadas pelo `arch-contract`): `lib` (lógica pura, sem DOM nem rede) ← `data` ← `ui` ← `app`. Só `src/telemetry/provedores/` conhece SDKs de fornecedor; o resto usa a fachada `telemetria` (`erro`, `evento`, `tempo`).
-- Dados do site saem do pipeline (`python -m exoplanetas.pipeline` grava `site/public/dados/`). Nunca edite esses JSON à mão e nunca digite no HTML ou no código um número que venha deles.
+- Dados do site saem do pipeline (`python -m exoplanetas.pipeline` grava `site/public/dados/`). Nunca edite esses JSON à mão e nunca digite no HTML ou no código um número que venha deles. Constantes da análise que o site precisa espelhar (fronteiras de tamanho, deserto de Netunos quentes) saem em `parametros.json` e são cobertas por um teste de contrato: se o Python mudar, o teste do site falha.
 - **Interface e movimento** (skill [design-motion-principles](https://github.com/kylezantos/design-motion-principles); aqui: Emil Kowalski como lente principal, Jakub Krehel como secundária):
   - Todo conteúdo assíncrono tem **skeleton** do mesmo tamanho do conteúdo final e progresso; toda seção carrega **sob demanda** (`quandoVisivel` + `import()`).
   - Entrada e saída por transição de `opacity` e `transform`, com a saída mais curta e sutil que a entrada. Nunca anime `width`, `height`, `top` ou `left`.

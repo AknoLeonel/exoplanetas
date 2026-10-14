@@ -255,6 +255,42 @@ describe("gráfico período × raio", () => {
     expect(raiz.querySelector(".tooltip strong")?.textContent).toBe(b.nome);
   });
 
+  it("mexer dentro do mesmo ponto não reconstrói o tooltip", () => {
+    const raiz = montar();
+    const canvas = raiz.querySelector("canvas") as HTMLCanvasElement;
+    const alvo = planetas[1];
+    if (!alvo) throw new Error("fixture");
+    mover(canvas, x(alvo.periodo), y(alvo.raio));
+    const antes = raiz.querySelector(".tooltip strong");
+    mover(canvas, x(alvo.periodo) + 1, y(alvo.raio) + 1);
+    expect(raiz.querySelector(".tooltip strong")).toBe(antes);
+  });
+
+  it("lê as cores do tema uma vez, não a cada quadro, e de novo quando o tema muda", async () => {
+    let aoTrocar: () => void = () => {};
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      addEventListener: (_: string, cb: () => void) => {
+        aoTrocar = cb;
+      },
+      removeEventListener: () => {},
+    }));
+    const espiao = vi.spyOn(window, "getComputedStyle");
+    const raiz = montar();
+    await esperar(60);
+    const leiturasIniciais = espiao.mock.calls.length;
+    const canvas = raiz.querySelector("canvas") as HTMLCanvasElement;
+    for (let i = 0; i < 5; i++) mover(canvas, 3 + i, 3 + i);
+    raiz.querySelector<HTMLButtonElement>(".ficha")?.click();
+    await esperar(60);
+    expect(espiao.mock.calls.length - leiturasIniciais).toBeLessThan(5);
+    const antes = espiao.mock.calls.length;
+    aoTrocar();
+    await esperar(60);
+    expect(espiao.mock.calls.length).toBeGreaterThan(antes);
+    vi.unstubAllGlobals();
+  });
+
   it("tocar (pointerdown) também seleciona, para telas sensíveis ao toque", () => {
     const raiz = montar();
     const canvas = raiz.querySelector("canvas") as HTMLCanvasElement;

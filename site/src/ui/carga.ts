@@ -27,7 +27,11 @@ function atualizarBarra(skeleton: HTMLElement, fracao: number | null): void {
 
 function painelDeErro(mensagem: string, tentarDeNovo: () => void): HTMLElement {
   const botao = h("button", { class: "botao", type: "button" }, "Tentar de novo");
-  botao.addEventListener("click", tentarDeNovo);
+  botao.addEventListener("click", () => {
+    // Um clique só: o painel ainda está saindo e outro clique abriria uma segunda tentativa.
+    botao.disabled = true;
+    tentarDeNovo();
+  });
   return h(
     "div",
     { class: "erro", role: "alert" },
@@ -75,4 +79,35 @@ export async function carregarSecao<T>(pedido: PedidoDeCarga<T>): Promise<void> 
 /** Importa o módulo de uma seção registrando a carga de código no progresso. */
 export function importarModulo<M>(importacao: Promise<M>): Promise<M> {
   return acompanhar(importacao);
+}
+
+export interface ModuloDeSecao {
+  montar(host: HTMLElement): Promise<void>;
+}
+
+/**
+ * Baixa o código de uma seção e o monta. Se o código não chegar (rede instável, deploy novo),
+ * mostra o mesmo painel de erro com "Tentar de novo" das falhas de dados, em vez de deixar o skeleton parado.
+ */
+export async function iniciarSecao(
+  host: HTMLElement,
+  nome: string,
+  importar: () => Promise<ModuloDeSecao>,
+): Promise<void> {
+  const skeleton = host.querySelector<HTMLElement>("[data-skeleton]");
+  let modulo: ModuloDeSecao;
+  try {
+    modulo = await importarModulo(importar());
+  } catch (e) {
+    telemetria.erro(e, { secao: nome, etapa: "modulo" });
+    if (!skeleton) return;
+    const erro = painelDeErro(e instanceof Error ? e.message : "Erro desconhecido.", () => {
+      host.setAttribute("aria-busy", "true");
+      void trocar(host, erro, skeleton).then(() => iniciarSecao(host, nome, importar));
+    });
+    await trocar(host, skeleton, erro);
+    host.setAttribute("aria-busy", "false");
+    return;
+  }
+  await modulo.montar(host);
 }

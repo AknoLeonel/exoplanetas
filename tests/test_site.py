@@ -4,7 +4,7 @@ import json
 
 import pandas as pd
 
-from exoplanetas import pipeline, site
+from exoplanetas import analise, dados, pipeline, site
 from tests.test_modelo_pipeline import sintetico
 
 
@@ -66,7 +66,7 @@ def test_gravar_cria_arquivos_json_validos(tmp_path):
     arquivos = site.gerar(sintetico(n=20), {"dados": {"planetas": 20}})
     site.gravar(arquivos, tmp_path / "novo" / "dados")
     salvos = {p.name for p in (tmp_path / "novo" / "dados").iterdir()}
-    assert salvos == {"planetas.json", "descobertas.json", "metricas.json"}
+    assert salvos == {"planetas.json", "descobertas.json", "metricas.json", "parametros.json"}
     metricas = json.loads((tmp_path / "novo" / "dados" / "metricas.json").read_text(encoding="utf-8"))
     assert metricas == {"dados": {"planetas": 20}}
 
@@ -80,3 +80,23 @@ def test_pipeline_grava_dados_do_site_quando_pedido(tmp_path):
     r = pipeline.executar(csv=csv, saida=tmp_path / "reports", figuras=False, pasta_site=destino)
     assert json.loads((destino / "metricas.json").read_text(encoding="utf-8")) == r
     assert (destino / "planetas.json").stat().st_size > 1_000
+
+
+def test_sem_nan_troca_nao_finitos_por_none_em_qualquer_profundidade():
+    entrada = {"a": float("nan"), "b": [1.5, float("inf"), {"c": float("-inf")}], "d": "texto", "e": 3}
+    assert site.sem_nan(entrada) == {"a": None, "b": [1.5, None, {"c": None}], "d": "texto", "e": 3}
+
+
+def test_gravar_aceita_metricas_com_nan_depois_de_sem_nan(tmp_path):
+    metricas = {"parecidos": [{"pl_eqt": float("nan")}]}
+    site.gravar(site.gerar(sintetico(n=10), metricas), tmp_path)
+    salvo = json.loads((tmp_path / "metricas.json").read_text(encoding="utf-8"))
+    assert salvo == {"parecidos": [{"pl_eqt": None}]}
+
+
+def test_parametros_vem_das_constantes_da_analise():
+    p = site.parametros()
+    assert [c["nome"] for c in p["classes"]] == [c[0] for c in dados.CLASSES_TAMANHO]
+    assert p["classes"][-1]["max"] is None  # infinito não existe em JSON
+    assert p["classes"][0] == {"nome": "Terra", "min": 0.0, "max": 1.25}
+    assert p["deserto"] == {"periodo_max": analise.DESERTO_PERIODO_DIAS, "raio_min": 2.0, "raio_max": 6.0}

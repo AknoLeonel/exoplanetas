@@ -172,6 +172,22 @@ describe("fachada de telemetria", () => {
     expect(otel.erro).toHaveBeenCalledOnce();
   });
 
+  it("erro global antes de os SDKs iniciarem vai para todos, porque nenhum SDK o viu", async () => {
+    const sentry = falso("sentry", true);
+    const otel = falso("otel", false);
+    const promessa = telemetria.iniciarTelemetria(
+      lerConfiguracao({ VITE_SENTRY_DSN: "d", VITE_OTEL_EXPORTER_URL: "u" }, "t", "v"),
+      carregadores({ sentry, otel }),
+    );
+    telemetria.erroGlobal(new Error("cedo"), { origem: "window.error" });
+    await promessa;
+    expect(sentry.erro).toHaveBeenCalledOnce();
+    expect(otel.erro).toHaveBeenCalledOnce();
+    telemetria.erroGlobal(new Error("tarde"));
+    expect(sentry.erro).toHaveBeenCalledOnce();
+    expect(otel.erro).toHaveBeenCalledTimes(2);
+  });
+
   it("captura erros e rejeições da janela e permite desligar", async () => {
     const otel = falso("otel", false);
     await telemetria.iniciarTelemetria(

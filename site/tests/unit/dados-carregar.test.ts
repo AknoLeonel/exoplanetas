@@ -169,7 +169,7 @@ describe("cargas memorizadas", () => {
               descobertas: {},
               deserto_netunos_quentes: {},
               parecidos_com_a_terra_mais_proximos: [],
-              modelo: { resultados: {}, importancia_permutacao: {} },
+              modelo: { resultados: { a: {} }, importancia_permutacao: {} },
             },
       );
     };

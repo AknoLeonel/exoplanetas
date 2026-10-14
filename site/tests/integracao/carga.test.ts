@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aoMudarProgresso, type EstadoDoProgresso } from "../../src/data/acompanhar";
 import * as telemetria from "../../src/telemetry";
-import { carregarSecao, importarModulo } from "../../src/ui/carga";
+import { carregarSecao, importarModulo, iniciarSecao } from "../../src/ui/carga";
 import { h } from "../../src/ui/dom";
 import { criarSecao, esperar } from "./fixtures";
 
@@ -119,6 +119,20 @@ describe("carregarSecao", () => {
     await vi.waitFor(() => expect(host.querySelector("[data-skeleton]")).toBeNull());
   });
 
+  it("o botão 'Tentar de novo' desativa no primeiro clique: cliques repetidos não abrem outra tentativa", async () => {
+    const host = criarSecao();
+    const carregar = vi.fn().mockRejectedValueOnce(new Error("falha")).mockResolvedValue("ok");
+    await carregarSecao({ host, nome: "t", carregar, renderizar: (d: string) => h("p", { class: "conteudo" }, d) });
+    const botao = host.querySelector<HTMLButtonElement>(".erro button") as HTMLButtonElement;
+    botao.click();
+    expect(botao.disabled).toBe(true);
+    botao.click();
+    botao.dispatchEvent(new MouseEvent("click"));
+    await vi.waitFor(() => expect(host.querySelectorAll(".conteudo")).toHaveLength(1));
+    expect(carregar).toHaveBeenCalledTimes(2);
+    expect(host.querySelectorAll("[data-skeleton]")).toHaveLength(0);
+  });
+
   it("exige o skeleton no HTML", async () => {
     const host = document.createElement("div");
     await expect(
@@ -136,5 +150,56 @@ describe("importarModulo", () => {
     expect(modulo).toEqual({ montar: 1 });
     expect(eventos[0]?.pendentes).toBe(1);
     expect(eventos.at(-1)).toEqual({ fracao: 1, pendentes: 0 });
+  });
+});
+
+describe("iniciarSecao", () => {
+  it("importa o módulo e o monta", async () => {
+    const host = criarSecao();
+    const montar = vi.fn(async () => {});
+    await iniciarSecao(host, "t", async () => ({ montar }));
+    expect(montar).toHaveBeenCalledWith(host);
+  });
+
+  it("se o código não chegar, mostra erro com 'Tentar de novo' em vez de deixar o skeleton parado", async () => {
+    const host = criarSecao();
+    const espiao = vi.spyOn(telemetria, "erro");
+    const importar = vi.fn().mockRejectedValueOnce(new Error("Failed to fetch dynamically imported module"));
+    await iniciarSecao(host, "explorador", importar);
+    expect(host.querySelector(".erro")?.textContent).toContain("Failed to fetch dynamically imported module");
+    expect(host.querySelector("[data-skeleton]")).toBeNull();
+    expect(host.getAttribute("aria-busy")).toBe("false");
+    expect(espiao).toHaveBeenCalledWith(expect.any(Error), { secao: "explorador", etapa: "modulo" });
+  });
+
+  it("'Tentar de novo' volta ao skeleton, importa outra vez e monta, uma única vez mesmo com cliques repetidos", async () => {
+    const host = criarSecao();
+    const montar = vi.fn(async (h: HTMLElement) => {
+      h.append("montado");
+    });
+    const importar = vi.fn().mockRejectedValueOnce(new Error("rede")).mockResolvedValue({ montar });
+    await iniciarSecao(host, "t", importar);
+    const botao = host.querySelector<HTMLButtonElement>(".erro button") as HTMLButtonElement;
+    botao.click();
+    botao.click();
+    await vi.waitFor(() => expect(montar).toHaveBeenCalledTimes(1));
+    expect(importar).toHaveBeenCalledTimes(2);
+    expect(host.querySelector(".erro")).toBeNull();
+    expect(host.getAttribute("aria-busy")).toBe("true");
+  });
+
+  it("sem skeleton só registra o erro", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const espiao = vi.spyOn(telemetria, "erro");
+    await iniciarSecao(host, "t", () => Promise.reject(new Error("x")));
+    expect(espiao).toHaveBeenCalledOnce();
+    expect(host.querySelector(".erro")).toBeNull();
+  });
+
+  it("erro de código que não é Error mostra mensagem genérica", async () => {
+    const host = criarSecao();
+    await iniciarSecao(host, "t", () => Promise.reject("x"));
+    expect(host.querySelector(".erro")?.textContent).toContain("Erro desconhecido.");
   });
 });

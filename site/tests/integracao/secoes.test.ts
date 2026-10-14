@@ -6,7 +6,7 @@ import { montarDescobertas } from "../../src/ui/descobertas";
 import { h } from "../../src/ui/dom";
 import { quandoVisivel } from "../../src/ui/lazy";
 import { montarModelo } from "../../src/ui/modelo";
-import { dataDaColeta, montarResumo } from "../../src/ui/resumo";
+import { dataDaColeta, erroDoMelhorEDaReferencia, montarResumo } from "../../src/ui/resumo";
 import { montarTerra } from "../../src/ui/terra";
 import { criarTooltip } from "../../src/ui/tooltip";
 import { descobertasDeTeste, esperar, metricasDeTeste } from "./fixtures";
@@ -29,6 +29,27 @@ describe("resumo", () => {
     expect(textos[2]).toContain("1.504 planetas, 1.276 pelo Kepler");
     expect(textos[3]).toContain("18,6%");
     expect(textos[3]).toContain("contra 60,7%");
+  });
+
+  it("a referência é a 'Mediana', não o pior modelo", () => {
+    const m = structuredClone(metricasDeTeste);
+    m.modelo.resultados = {
+      "Mediana (referência)": { erro_percentual_mediano: 40, r2_log: 0, dentro_de_20pct: 1 },
+      "Modelo ruim": { erro_percentual_mediano: 90, r2_log: -1, dentro_de_20pct: 0 },
+      "Modelo bom": { erro_percentual_mediano: 10, r2_log: 0.9, dentro_de_20pct: 80 },
+    };
+    expect(erroDoMelhorEDaReferencia(m)).toEqual({ melhor: 10, referencia: 40 });
+    expect(montarResumo(m).textContent).toContain("contra 40,0% de chutar a mediana");
+  });
+
+  it("sem linha de base, a referência é o pior modelo", () => {
+    expect(erroDoMelhorEDaReferencia(metricasDeTeste)).toEqual({ melhor: 18.6, referencia: 60.7 });
+    const m = structuredClone(metricasDeTeste);
+    m.modelo.resultados = {
+      A: { erro_percentual_mediano: 5, r2_log: 0, dentro_de_20pct: 0 },
+      B: { erro_percentual_mediano: 8, r2_log: 0, dentro_de_20pct: 0 },
+    };
+    expect(erroDoMelhorEDaReferencia(m)).toEqual({ melhor: 5, referencia: 8 });
   });
 
   it("formata a data da coleta em UTC", () => {
@@ -63,6 +84,10 @@ describe("descobertas por ano", () => {
     expect(r.querySelector("svg")?.textContent).toContain("2016: 1.474");
     expect(r.querySelector("svg")?.getAttribute("aria-label")).toContain("de 2013 a 2016");
     expect(r.querySelector("svg")?.getAttribute("data-visivel")).toBe("false");
+  });
+
+  it("o gráfico é um grupo (não uma imagem), para os alvos focáveis de cada ano serem lidos", () => {
+    expect(montarDescobertas(descobertasDeTeste).querySelector("svg")?.getAttribute("role")).toBe("group");
   });
 
   it("os alvos são focáveis e anunciam o total do ano", () => {
@@ -179,6 +204,15 @@ describe("parecidos com a Terra", () => {
     expect(itens[0]?.textContent).toContain("1,62× a da Terra");
     expect(itens[0]?.textContent).toContain("315 K");
     expect(itens[0]?.textContent).toContain("40 anos-luz");
+  });
+
+  it("temperatura ausente aparece como traço, não como 0 K", () => {
+    const m = structuredClone(metricasDeTeste);
+    const [primeiro] = m.parecidos_com_a_terra_mais_proximos;
+    if (primeiro) primeiro.pl_eqt = null;
+    const texto = montarTerra(m).querySelector("li")?.textContent ?? "";
+    expect(texto).toContain("Temperatura—");
+    expect(texto).not.toContain("0 K");
   });
 });
 

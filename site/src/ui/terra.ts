@@ -21,7 +21,7 @@ export function montarTerra(m: Metricas): HTMLElement {
           h("dt", {}, "Luz recebida"),
           h("dd", {}, `${decimal(p.pl_insol, 2)}× a da Terra`),
           h("dt", {}, "Temperatura"),
-          h("dd", {}, `${milhar(Math.round(p.pl_eqt))} K`),
+          h("dd", {}, p.pl_eqt === null ? "—" : `${milhar(Math.round(p.pl_eqt))} K`),
           h("dt", {}, "Distância"),
           h("dd", {}, anosLuz(p.sy_dist)),
         ),

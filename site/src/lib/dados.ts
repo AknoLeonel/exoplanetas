@@ -26,6 +26,8 @@ export function lerMetricas(bruto: unknown): Metricas {
     Array.isArray(bruto.parecidos_com_a_terra_mais_proximos) &&
     ehObjeto(bruto.modelo) &&
     ehObjeto(bruto.modelo.resultados) &&
+    // Sem nenhum modelo não há o que comparar (e o resumo mostraria "Infinity%").
+    Object.keys(bruto.modelo.resultados).length > 0 &&
     ehObjeto(bruto.modelo.importancia_permutacao);
   if (!ok) throw new ErroDados("metricas.json fora do formato esperado", "metricas");
   return bruto as unknown as Metricas;

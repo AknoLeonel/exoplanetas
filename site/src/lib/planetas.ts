@@ -60,12 +60,20 @@ export interface Filtro {
   busca: string;
 }
 
+const NOMES_NORMALIZADOS = new Map<string, string>();
+
+/** Minúsculas e sem acentos. Os nomes dos planetas repetem a cada filtro, então ficam em cache. */
 function normalizar(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim();
+  let normalizado = NOMES_NORMALIZADOS.get(texto);
+  if (normalizado === undefined) {
+    normalizado = texto
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLowerCase()
+      .trim();
+    NOMES_NORMALIZADOS.set(texto, normalizado);
+  }
+  return normalizado;
 }
 
 export function filtrar(planetas: readonly Planeta[], filtro: Filtro): Planeta[] {

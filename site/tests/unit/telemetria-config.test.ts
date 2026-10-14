@@ -69,6 +69,27 @@ describe("lerConfiguracao", () => {
     expect(semConta.newrelic).toMatchObject({ accountId: "", trustKey: "" });
   });
 
+  it("variáveis do New Relic vazias (como no .env.example) caem nos valores padrão", () => {
+    const c = lerConfiguracao(
+      {
+        VITE_NR_LICENSE_KEY: "k",
+        VITE_NR_APPLICATION_ID: "9",
+        VITE_NR_ACCOUNT_ID: "7",
+        VITE_NR_TRUST_KEY: "",
+        VITE_NR_AGENT_ID: "  ",
+      },
+      "p",
+      "v",
+    );
+    expect(c.newrelic).toMatchObject({ accountId: "7", trustKey: "7", agentId: "9" });
+    const semConta = lerConfiguracao(
+      { VITE_NR_LICENSE_KEY: "k", VITE_NR_APPLICATION_ID: "9", VITE_NR_ACCOUNT_ID: "", VITE_NR_TRUST_KEY: "" },
+      "p",
+      "v",
+    );
+    expect(semConta.newrelic).toMatchObject({ accountId: "", trustKey: "" });
+  });
+
   it("liga o OpenTelemetry com o endpoint e aceita nome de serviço próprio", () => {
     const c = lerConfiguracao(
       { VITE_OTEL_EXPORTER_URL: "https://c/v1/traces", VITE_SERVICE_NAME: "meu-site" },

@@ -20,6 +20,7 @@ export interface ResultadoDaInicializacao {
 
 type Pendente = (p: Provedor) => void;
 
+/** Itens guardados enquanto os SDKs iniciam. O que passar disso é descartado: a prioridade é não pesar. */
 const LIMITE_DA_FILA = 50;
 
 let provedores: Provedor[] = [];
@@ -80,10 +81,14 @@ export function tempo(nome: string, ms: number, dados?: Contexto): void {
   evento(nome, { ...dados, duracao_ms: Math.round(ms) });
 }
 
-/** Erro não tratado: só vai para quem não o captura sozinho, para não duplicar. */
+/**
+ * Erro não tratado: vai só para quem não o captura sozinho, para não duplicar. A exceção são os erros
+ * que acontecem antes de os SDKs iniciarem: nenhum SDK os viu, então todos recebem.
+ */
 export function erroGlobal(e: unknown, contexto?: Contexto): void {
+  const antesDosSdks = iniciando;
   despachar((p) => {
-    if (!p.capturaAutomatica) p.erro(e, contexto);
+    if (antesDosSdks || !p.capturaAutomatica) p.erro(e, contexto);
   });
 }
 

@@ -22,10 +22,16 @@ export function dataDaColeta(iso: string | null): string | null {
   return d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 }
 
+/** Erro do melhor modelo e o da linha de base "Mediana (referência)" (se faltar, o pior modelo). */
+export function erroDoMelhorEDaReferencia(m: Metricas): { melhor: number; referencia: number } {
+  const resultados = Object.entries(m.modelo.resultados);
+  const erros = resultados.map(([, r]) => r.erro_percentual_mediano);
+  const base = resultados.find(([nome]) => nome.startsWith("Mediana"));
+  return { melhor: Math.min(...erros), referencia: base ? base[1].erro_percentual_mediano : Math.max(...erros) };
+}
+
 export function montarResumo(m: Metricas): HTMLElement {
-  const resultados = Object.values(m.modelo.resultados).map((r) => r.erro_percentual_mediano);
-  const melhor = Math.min(...resultados);
-  const referencia = Math.max(...resultados);
+  const { melhor, referencia } = erroDoMelhorEDaReferencia(m);
   return h(
     "div",
     { class: "cartoes" },

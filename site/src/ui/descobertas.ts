@@ -35,8 +35,7 @@ export function montarDescobertas(d: Descobertas): HTMLElement {
   const total = totais(d);
   const maximo = Math.max(...total);
   const marcas = marcasLineares(maximo, 5);
-  const topo = marcas[marcas.length - 1] ?? maximo;
-  const y = escalaLinear([0, Math.max(topo, maximo)], [ALTURA - M.base, M.topo]);
+  const y = escalaLinear([0, maximo], [ALTURA - M.base, M.topo]);
   const passo = (LARGURA - M.esquerda - M.direita) / d.anos.length;
   const largura = passo * 0.76;
 
@@ -54,7 +53,8 @@ export function montarDescobertas(d: Descobertas): HTMLElement {
   const grafico = svg("svg", {
     class: "grafico-barras",
     viewBox: `0 0 ${LARGURA} ${ALTURA}`,
-    role: "img",
+    // `group`, não `img`: dentro de uma imagem os alvos focáveis de cada ano seriam ignorados por leitores de tela.
+    role: "group",
     "aria-label": `Barras empilhadas de descobertas por ano e método, de ${d.anos[0]} a ${d.anos[d.anos.length - 1]}. Os mesmos números estão na tabela abaixo.`,
     "data-visivel": "false",
   });

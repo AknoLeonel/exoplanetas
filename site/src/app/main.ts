@@ -1,11 +1,11 @@
 import * as telemetria from "../telemetry";
 import { lerConfiguracao } from "../telemetry/config";
 import { montarBarraGlobal } from "../ui/barra-global";
-import { importarModulo } from "../ui/carga";
+import { iniciarSecao, type ModuloDeSecao } from "../ui/carga";
 import { quandoVisivel } from "../ui/lazy";
 
 /** Cada seção carrega o próprio código e os próprios dados só quando chega perto da tela. */
-const SECOES: Record<string, () => Promise<{ montar(host: HTMLElement): Promise<void> }>> = {
+const SECOES: Record<string, () => Promise<ModuloDeSecao>> = {
   resumo: () => import("../ui/resumo"),
   explorador: () => import("../ui/explorador"),
   descobertas: () => import("../ui/descobertas"),
@@ -19,11 +19,7 @@ function iniciarSecoes(): void {
     const carregarModulo = SECOES[nome];
     if (!carregarModulo) continue;
     // O resumo está no topo da página, então carrega logo; as demais esperam chegar perto da tela.
-    quandoVisivel(host, () => {
-      importarModulo(carregarModulo())
-        .then((m) => m.montar(host))
-        .catch((e: unknown) => telemetria.erro(e, { secao: nome, etapa: "modulo" }));
-    });
+    quandoVisivel(host, () => void iniciarSecao(host, nome, carregarModulo));
   }
 }
 

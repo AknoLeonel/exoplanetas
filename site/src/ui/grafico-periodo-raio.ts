@@ -1,7 +1,7 @@
 import { escalaLog, maisProximo, marcasLog, type Ponto } from "../lib/escala";
 import { anosLuz, compacto, eixo, milhar } from "../lib/formato";
 import type { Planeta } from "../lib/tipos";
-import { lerCores } from "./cores";
+import { type Cores, lerCores } from "./cores";
 import { h } from "./dom";
 import { criarTooltip } from "./tooltip";
 
@@ -9,7 +9,7 @@ import { criarTooltip } from "./tooltip";
 export const DOMINIO_PERIODO: readonly [number, number] = [0.1, 10_000];
 export const DOMINIO_RAIO: readonly [number, number] = [0.2, 50];
 /** Região do "deserto de Netunos quentes" (mesmos limites do pipeline Python). */
-const DESERTO = { periodoMax: 3, raioMin: 2, raioMax: 6 } as const;
+export const DESERTO = { periodoMax: 3, raioMin: 2, raioMax: 6 } as const;
 
 export const MARGEM = { esquerda: 56, direita: 16, topo: 12, base: 46 };
 const RAIO_DO_PONTO = 2.4;
@@ -53,6 +53,8 @@ export function criarGrafico(host: HTMLElement): GraficoPeriodoRaio {
   let largura = 0;
   let altura = 0;
   let quadro = 0;
+  // Os tokens de cor só mudam com o tema, então são lidos uma vez e relidos quando o tema troca.
+  let cores: Cores | null = null;
 
   function posicoes(): void {
     const x = escalaLog(DOMINIO_PERIODO, [MARGEM.esquerda, largura - MARGEM.direita]);
@@ -62,7 +64,7 @@ export function criarGrafico(host: HTMLElement): GraficoPeriodoRaio {
 
   function desenhar(): void {
     if (!contexto || largura === 0) return;
-    const cores = lerCores();
+    cores ??= lerCores();
     const dpr = window.devicePixelRatio || 1;
     contexto.setTransform(dpr, 0, 0, dpr, 0, 0);
     contexto.clearRect(0, 0, largura, altura);
@@ -179,10 +181,8 @@ export function criarGrafico(host: HTMLElement): GraficoPeriodoRaio {
     const indice = maisProximo(pontos, x, y, ALCANCE);
     const planeta = planetas[indice];
     const ponto = pontos[indice];
-    if (indice === destacado) {
-      if (planeta && ponto) tooltip.mostrar(conteudoDoTooltip(planeta), ponto.x, ponto.y);
-      return;
-    }
+    // O tooltip fica ancorado no ponto, não no cursor: mexer dentro do mesmo ponto não muda nada.
+    if (indice === destacado) return;
     destacado = indice;
     if (planeta && ponto) tooltip.mostrar(conteudoDoTooltip(planeta), ponto.x, ponto.y);
     else tooltip.esconder();
@@ -202,7 +202,11 @@ export function criarGrafico(host: HTMLElement): GraficoPeriodoRaio {
   const observador = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(medir);
   observador?.observe(area);
   const esquema = typeof matchMedia === "function" ? matchMedia("(prefers-color-scheme: dark)") : null;
-  esquema?.addEventListener("change", agendar);
+  const aoTrocarDeTema = () => {
+    cores = null;
+    agendar();
+  };
+  esquema?.addEventListener("change", aoTrocarDeTema);
   medir();
 
   return {
@@ -220,7 +224,7 @@ export function criarGrafico(host: HTMLElement): GraficoPeriodoRaio {
     destruir() {
       cancelAnimationFrame(quadro);
       observador?.disconnect();
-      esquema?.removeEventListener("change", agendar);
+      esquema?.removeEventListener("change", aoTrocarDeTema);
       canvas.removeEventListener("pointermove", aoMover);
       canvas.removeEventListener("pointerdown", aoMover);
       canvas.removeEventListener("pointerleave", aoSair);
