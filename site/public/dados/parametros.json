@@ -1,0 +1,1 @@
+{"classes":[{"nome":"Terra","min":0.0,"max":1.25},{"nome":"Super-Terra","min":1.25,"max":2.0},{"nome":"Netuno","min":2.0,"max":6.0},{"nome":"Júpiter","min":6.0,"max":15.0},{"nome":"Super-Júpiter","min":15.0,"max":null}],"deserto":{"periodo_max":3.0,"raio_min":2.0,"raio_max":6.0}}

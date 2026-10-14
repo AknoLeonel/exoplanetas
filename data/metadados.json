@@ -1,0 +1,28 @@
+{
+  "fonte": "NASA Exoplanet Archive, tabela pscomppars",
+  "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=select+pl_name%2Chostname%2Cdiscoverymethod%2Cdisc_year%2Cdisc_facility%2Cpl_orbper%2Cpl_orbsmax%2Cpl_rade%2Cpl_bmasse%2Cpl_bmassprov%2Cpl_dens%2Cpl_eqt%2Cpl_insol%2Cpl_orbeccen%2Cst_teff%2Cst_rad%2Cst_mass%2Cst_met%2Csy_dist%2Csy_pnum+from+pscomppars+order+by+pl_name&format=csv",
+  "coletado_em": "2026-10-14T21:25:43Z",
+  "planetas": 6445,
+  "colunas": [
+    "pl_name",
+    "hostname",
+    "discoverymethod",
+    "disc_year",
+    "disc_facility",
+    "pl_orbper",
+    "pl_orbsmax",
+    "pl_rade",
+    "pl_bmasse",
+    "pl_bmassprov",
+    "pl_dens",
+    "pl_eqt",
+    "pl_insol",
+    "pl_orbeccen",
+    "st_teff",
+    "st_rad",
+    "st_mass",
+    "st_met",
+    "sy_dist",
+    "sy_pnum"
+  ]
+}

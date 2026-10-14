@@ -4,3 +4,17 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .ipynb_checkpoints/
+*.egg-info/
+node_modules/
+dist/
+coverage/
+.stryker-tmp/
+site/reports/
+playwright-report/
+test-results/
+.env
+.env.local
+.vercel/
+*.tsbuildinfo
+.coverage
+coverage.xml
