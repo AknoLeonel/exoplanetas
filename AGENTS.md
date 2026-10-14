@@ -8,7 +8,7 @@ Instruções obrigatórias para qualquer agente de IA (de qualquer modelo ou fer
 2. Nunca faça commit direto na `main`. Crie uma branch: `feat/`, `fix/`, `docs/`, `chore/` ou `data/`.
 3. Toda mudança entra por Pull Request que menciona a Issue na descrição (`Closes #N`, uma por linha se forem várias; `Refs #N` para Issues só relacionadas). Use `.github/pull_request_template.md`.
 4. O CI (lint e testes) precisa passar antes do merge.
-5. Commits seguem Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `data:`), com o assunto em minúsculas.
+5. Commits seguem Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `data:`), com o assunto começando em minúscula (siglas no meio, como NASA e CI, são permitidas).
 
 ## Dados
 
@@ -41,4 +41,4 @@ Instruções obrigatórias para qualquer agente de IA (de qualquer modelo ou fer
   - Toda duração e curva vem de `src/estilos/tokens.css`, e `prefers-reduced-motion` é tratado no mesmo código, não depois.
 - **Qualidade** antes de abrir o PR, dentro de `site/`: `npm run qualidade`, `npm test`, `npm run e2e`. Mudou a lógica em `src/lib`? Rode também `npm run mutacao` (nota mínima 80).
 - **Testes**: toda função nova em `src/lib` vem com teste unitário; todo componente novo, com teste de integração; todo comportamento visível ao usuário, com teste Playwright. A cobertura mínima está em `site/vite.config.ts` e vai para o Codecov.
-- Mensagens de commit passam no `commitlint` (assunto em minúsculas, tipos listados em `site/commitlint.config.mjs`).
+- Mensagens de commit passam no `commitlint` (assunto sem começar em maiúscula, tipos listados em `site/commitlint.config.mjs`). O CI confere todos os commits entre a base do PR e a cabeça dele.
