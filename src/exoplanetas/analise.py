@@ -43,7 +43,7 @@ def kepler_por_ano(df: pd.DataFrame, anos: list[int]) -> dict[str, dict[str, int
     out = {}
     for ano in anos:
         do_ano = df[df["disc_year"] == ano]
-        out[str(ano)] = {"total": int(len(do_ano)), "kepler": int((do_ano["disc_facility"] == "Kepler").sum())}
+        out[str(ano)] = {"total": len(do_ano), "kepler": int((do_ano["disc_facility"] == "Kepler").sum())}
     return out
 
 
@@ -75,7 +75,7 @@ def deserto_netunos_quentes(df: pd.DataFrame, periodo_curto: float = 3.0) -> dic
     frac_geral = float(netuno.mean())
     frac_curto = float(netuno[curto].mean()) if curto.any() else float("nan")
     return {
-        "planetas_transito": int(len(t)),
+        "planetas_transito": len(t),
         "fracao_netunos_geral": frac_geral,
         "fracao_netunos_orbita_curta": frac_curto,
         "planetas_orbita_curta": int(curto.sum()),

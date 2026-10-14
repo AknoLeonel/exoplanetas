@@ -37,7 +37,8 @@ def test_readme_cita_os_numeros_do_metricas_json():
     for nome, r in mod["resultados"].items():
         esperados += [pct(r["erro_percentual_mediano"]), pct(r["dentro_de_20pct"]), f"{r['r2_log']:.2f}".replace(".", ",")]
     for ano, v in desc["dois_maiores_anos"].items():
-        esperados.append(f"{milhar(v['kepler'])} dos {milhar(v['total'])} planetas de {ano}" if ano != str(desc["ano_de_pico"]) else f"{milhar(v['kepler'])} dos {milhar(v['total'])} de {ano}")
+        sufixo = f"de {ano}" if ano == str(desc["ano_de_pico"]) else f"planetas de {ano}"
+        esperados.append(f"{milhar(v['kepler'])} dos {milhar(v['total'])} {sufixo}")
     for p in m["parecidos_com_a_terra_mais_proximos"][:1]:
         esperados.append(p["pl_name"])
     faltando = [e for e in esperados if e not in texto]

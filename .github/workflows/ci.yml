@@ -21,9 +21,9 @@ jobs:
           cache: pip
       - run: pip install -r requirements.lock -e ".[dev]"
       - name: Ruff (lint)
-        run: ruff check .
+        run: ruff check --output-format=concise .
       - name: Ruff (formatação)
-        run: ruff format --check .
+        run: ruff format --diff .
       - name: Testes
         run: pytest
       - name: Pipeline reproduz as métricas do README

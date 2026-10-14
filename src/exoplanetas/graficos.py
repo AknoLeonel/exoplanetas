@@ -134,9 +134,11 @@ def massa_raio(df: pd.DataFrame, prev_log: np.ndarray, lei: dict, tema: str, des
     """Massa × raio medidos, com a lei de potência e as previsões do modelo."""
     fig, ax, t = _eixos(tema, altura=5.6)
     ax.scatter(df["pl_bmasse"], df["pl_rade"], s=10, color=t["series"][0], alpha=0.5, linewidths=0, label="Medido")
-    ax.scatter(df["pl_bmasse"], 10**prev_log, s=10, color=t["series"][1], alpha=0.5, linewidths=0, label="Previsto pelo modelo (fora da amostra)")
+    rotulo_prev = "Previsto pelo modelo (fora da amostra)"
+    ax.scatter(df["pl_bmasse"], 10**prev_log, s=10, color=t["series"][1], alpha=0.5, linewidths=0, label=rotulo_prev)
     xs = np.logspace(np.log10(df["pl_bmasse"].min()), np.log10(df["pl_bmasse"].max()), 100)
-    ax.plot(xs, lei["constante"] * xs ** lei["expoente"], color=t["texto"], linewidth=1.6, label=f"Lei de potência R ∝ M^{lei['expoente']:.2f}")
+    rotulo_lei = f"Lei de potência R ∝ M^{lei['expoente']:.2f}"
+    ax.plot(xs, lei["constante"] * xs ** lei["expoente"], color=t["texto"], linewidth=1.6, label=rotulo_lei)
     ax.set_xscale("log")
     ax.set_yscale("log")
     for eixo in (ax.xaxis, ax.yaxis):
@@ -146,7 +148,8 @@ def massa_raio(df: pd.DataFrame, prev_log: np.ndarray, lei: dict, tema: str, des
     leg = ax.legend(frameon=False, fontsize=9, loc="upper left", markerscale=2)
     for txt in leg.get_texts():
         txt.set_color(t["texto"])
-    _titulo(ax, t, "Uma reta só não explica massa e raio", "Planetas com massa e raio medidos · previsões por validação cruzada agrupada por estrela")
+    subtitulo = "Planetas com massa e raio medidos · previsões por validação cruzada agrupada por estrela"
+    _titulo(ax, t, "Uma reta só não explica massa e raio", subtitulo)
     return _salvar(fig, destino)
 
 

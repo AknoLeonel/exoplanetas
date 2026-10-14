@@ -41,7 +41,7 @@ def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = 
     resultado = {
         "dados": {
             "coletado_em": meta.get("coletado_em"),
-            "planetas": int(len(df)),
+            "planetas": len(df),
             "estrelas": int(df["hostname"].nunique()),
             "primeiro_ano": int(df["disc_year"].min()),
             "ultimo_ano": int(df["disc_year"].max()),
@@ -59,7 +59,7 @@ def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = 
         "deserto_netunos_quentes": analise.deserto_netunos_quentes(df),
         "parecidos_com_a_terra_mais_proximos": parecidos.to_dict(orient="records"),
         "modelo": {
-            "planetas": int(len(base)),
+            "planetas": len(base),
             "estrelas": int(base["hostname"].nunique()),
             "validacao": "GroupKFold (5 dobras) agrupado por estrela hospedeira",
             "features": dados.FEATURES,
