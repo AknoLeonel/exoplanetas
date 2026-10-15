@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EstadoDoProgresso } from "../../src/data/acompanhar";
 
 const PLANETAS = {
-  colunas: ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia"],
-  linhas: [["A b", 2010, 3, 1.5, null, null, null]],
+  colunas: ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia", "medido"],
+  linhas: [["A b", 2010, 3, 1.5, null, null, null, true]],
 };
 
 function resposta(corpo: unknown, init: ResponseInit = {}): Response {

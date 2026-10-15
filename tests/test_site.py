@@ -19,16 +19,33 @@ def _com_um_planeta_radial() -> pd.DataFrame:
     return pd.concat([df, radial, sem_periodo], ignore_index=True)
 
 
-def test_planetas_so_de_transito_com_periodo_e_raio():
+def test_planetas_com_periodo_e_raio_e_marca_os_de_raio_estimado():
     df = _com_um_planeta_radial()
     out = site.planetas_com_raio(df)
-    nomes = [linha[0] for linha in out["linhas"]]
+    por_nome = {linha[0]: linha for linha in out["linhas"]}
     assert out["colunas"] == site.COLUNAS_PLANETAS
-    assert "Radial b" not in nomes
-    assert "Sem periodo b" not in nomes
-    assert len(nomes) == 30  # só os 30 originais: o radial e o sem período ficaram de fora
-    assert nomes == sorted(nomes)
+    assert out["colunas"][-1] == "medido"
+    assert "Sem periodo b" not in por_nome  # sem período não dá para desenhar
+    assert len(por_nome) == 31  # os 30 de trânsito + o radial
+    assert por_nome["Radial b"][-1] is False  # raio estimado
+    assert all(linha[-1] is True for nome, linha in por_nome.items() if nome != "Radial b")
+    assert list(por_nome) == sorted(por_nome)
     assert all(len(linha) == len(site.COLUNAS_PLANETAS) for linha in out["linhas"])
+
+
+def test_a_origem_do_raio_segue_o_mesmo_predicado_da_analise():
+    df = _com_um_planeta_radial()
+    medidos = set(analise.com_raio_medido(df)["pl_name"])
+    do_site = {linha[0] for linha in site.planetas_com_raio(df)["linhas"] if linha[-1]}
+    assert do_site == medidos - {"Sem periodo b"}  # o sem período não entra no gráfico
+
+
+def test_planeta_sem_raio_fica_de_fora():
+    df = sintetico(n=5)
+    df.loc[0, "pl_rade"] = float("nan")
+    nomes = [linha[0] for linha in site.planetas_com_raio(df)["linhas"]]
+    assert "P0" not in nomes
+    assert len(nomes) == 4
 
 
 def test_massa_so_quando_medida_e_nan_vira_none():

@@ -79,6 +79,36 @@
   }
 }
 
+/* Escolha manual do tema (botão no topo): vale nos dois sentidos, acima da preferência do sistema. */
+:root[data-tema="escuro"] {
+  color-scheme: dark;
+  --superficie: #131312;
+  --superficie-2: #1d1d1b;
+  --texto: #f0efec;
+  --texto-2: #c3c2b7;
+  --texto-3: #a3a29a;
+  --linha: rgb(255 255 255 / 0.12);
+  --grade: rgb(255 255 255 / 0.08);
+  --destaque: #3987e5;
+  --erro: #f2b8b5;
+  --sombra: 0 0 0 1px rgb(255 255 255 / 0.1);
+  --sombra-flutuante: 0 0 0 1px rgb(255 255 255 / 0.16), 0 8px 24px -4px rgb(0 0 0 / 0.6);
+  --sk-base: #242422;
+  --sk-brilho: rgb(255 255 255 / 0.07);
+  --classe-terra: #274b73;
+  --classe-super-terra: #2f6db5;
+  --classe-netuno: #3987e5;
+  --classe-jupiter: #76afef;
+  --classe-super-jupiter: #b9d6f7;
+  --deserto: rgb(217 89 38 / 0.16);
+  --deserto-borda: #d95926;
+  --metodo-transit: #3987e5;
+  --metodo-radial-velocity: #d95926;
+  --metodo-microlensing: #199e70;
+  --metodo-imaging: #c98500;
+  --metodo-outros: #77776f;
+}
+
 /* Quem pede menos movimento recebe estados finais direto, sem transição. */
 @media (prefers-reduced-motion: reduce) {
   :root {

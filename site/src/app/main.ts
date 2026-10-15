@@ -3,6 +3,7 @@ import { evento, iniciarTelemetria, instalarCapturaGlobal } from "../telemetry";
 import { lerConfiguracao } from "../telemetry/config";
 import { montarBarraGlobal } from "../ui/barra-global";
 import { type Carregadores, montarShell } from "../ui/shell";
+import { iniciarTema } from "../ui/tema";
 
 /**
  * Um carregador por módulo: o código de cada um só é baixado quando a rota dele é aberta.
@@ -18,6 +19,9 @@ const CARREGADORES: Carregadores = {
 async function iniciar(): Promise<void> {
   const barra = document.getElementById("progresso-global");
   if (barra) montarBarraGlobal(barra);
+
+  const botaoTema = document.getElementById("botao-tema");
+  if (botaoTema) iniciarTema(botaoTema);
 
   const palco = document.getElementById("principal");
   const navegacao = document.getElementById("nav-modulos");

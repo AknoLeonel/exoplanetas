@@ -12,10 +12,17 @@ const TODAS: ReadonlySet<IdClasse> = new Set(CLASSES.map((c) => c.id));
 /** Painel de exploração: filtros, gráfico período × raio e tabela, todos sobre o mesmo recorte. */
 export function montarExplorador(planetas: readonly Planeta[]): HTMLElement {
   const [anoMin, anoMax] = intervaloDeAnos(planetas);
-  const filtro: { classes: Set<IdClasse>; anoMinimo: number; soComMassa: boolean; busca: string } = {
+  const filtro: {
+    classes: Set<IdClasse>;
+    anoMinimo: number;
+    soComMassa: boolean;
+    incluirEstimados: boolean;
+    busca: string;
+  } = {
     classes: new Set(TODAS),
     anoMinimo: anoMin,
     soComMassa: false,
+    incluirEstimados: false,
     busca: "",
   };
 
@@ -59,6 +66,12 @@ export function montarExplorador(planetas: readonly Planeta[]): HTMLElement {
     aplicar(true);
   });
 
+  const estimados = h("input", { type: "checkbox", id: "filtro-estimados" });
+  estimados.addEventListener("change", () => {
+    filtro.incluirEstimados = estimados.checked;
+    aplicar(true);
+  });
+
   const busca = h("input", { type: "search", id: "filtro-busca", placeholder: "Buscar planeta", autocomplete: "off" });
   busca.addEventListener("input", () => {
     filtro.busca = busca.value;
@@ -71,6 +84,7 @@ export function montarExplorador(planetas: readonly Planeta[]): HTMLElement {
     grupo,
     h("label", { class: "controle", for: "filtro-ano" }, "Descobertos a partir de", ano, saidaAno),
     h("label", { class: "controle", for: "filtro-massa" }, massa, "Só com massa medida"),
+    h("label", { class: "controle", for: "filtro-estimados" }, estimados, "Incluir raios estimados (pontos vazados)"),
     h(
       "label",
       { class: "controle so-leitor-rotulo", for: "filtro-busca" },
@@ -83,13 +97,21 @@ export function montarExplorador(planetas: readonly Planeta[]): HTMLElement {
 
   function aplicar(animar: boolean): void {
     const recorte: Filtro = { ...filtro, classes: filtro.classes };
-    const filtrados = filtrar(planetas, recorte);
+    // O gráfico mostra tudo o que passa nos filtros; a busca só destaca. A tabela também filtra pela busca.
+    const noGrafico = filtrar(planetas, { ...recorte, busca: "" });
+    const naTabela = filtrar(planetas, recorte);
+    const buscando = filtro.busca.trim() !== "";
+    const destaques: ReadonlySet<string> | null = buscando ? new Set(naTabela.map((p) => p.nome)) : null;
     // As contagens das fichas ignoram a própria seleção de classes, para mostrar o que cada ficha traria.
-    const semClasses = contarPorClasse(filtrar(planetas, { ...recorte, classes: TODAS }));
+    const semClasses = contarPorClasse(filtrar(planetas, { ...recorte, busca: "", classes: TODAS }));
     for (const [id, ficha] of fichas) ficha.contagem.textContent = milhar(semClasses[id]);
-    grafico.atualizar(filtrados);
-    void tabela.atualizar(filtrados, animar);
-    resumo.textContent = `Mostrando ${milhar(filtrados.length)} de ${milhar(planetas.length)} planetas com raio medido.`;
+    grafico.atualizar(noGrafico, destaques);
+    void tabela.atualizar(naTabela, animar);
+    const base = planetas.filter((p) => filtro.incluirEstimados || p.medido).length;
+    const origem = filtro.incluirEstimados ? "com raio medido ou estimado" : "com raio medido";
+    resumo.textContent = `Mostrando ${milhar(noGrafico.length)} de ${milhar(base)} planetas ${origem}.${
+      destaques ? ` A busca destaca ${milhar(destaques.size)} no gráfico e filtra a tabela.` : ""
+    }`;
   }
 
   aplicar(false);

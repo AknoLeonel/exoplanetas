@@ -14,7 +14,7 @@ export function classificar(raio: number): IdClasse {
   return (classe ?? CLASSES[CLASSES.length - 1])?.id ?? "super-jupiter";
 }
 
-const COLUNAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia"] as const;
+const COLUNAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia", "medido"] as const;
 
 function numeroOuNulo(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -26,17 +26,32 @@ export function lerPlanetas(bruto: unknown): Planeta[] {
   if (!obj || !Array.isArray(obj.colunas) || !Array.isArray(obj.linhas)) {
     throw new ErroDados("planetas.json fora do formato esperado", "planetas");
   }
-  if (COLUNAS.some((c, i) => obj.colunas && (obj.colunas as unknown[])[i] !== c)) {
+  const colunas = obj.colunas as unknown[];
+  const iguaisAs = (esperadas: readonly string[]) =>
+    esperadas.length === colunas.length && esperadas.every((c, i) => colunas[i] === c);
+  // O CDN pode servir por até uma hora um planetas.json da versão anterior (sem `medido`) junto do código novo.
+  // Naquele arquivo todos os raios eram medidos, então é seguro tratá-los assim.
+  const versaoAnterior = iguaisAs(COLUNAS.slice(0, -1));
+  if (!versaoAnterior && !iguaisAs(COLUNAS)) {
     throw new ErroDados("planetas.json com colunas diferentes das esperadas", "planetas");
   }
   const planetas: Planeta[] = [];
   for (const linha of obj.linhas as unknown[]) {
     if (!Array.isArray(linha)) throw new ErroDados("linha inválida em planetas.json", "planetas");
-    const [nome, ano, periodo, raio, massa, temperatura, distancia] = linha as unknown[];
+    const [nome, ano, periodo, raio, massa, temperatura, distancia, medidoLido] = linha as unknown[];
+    const medido = versaoAnterior ? true : medidoLido;
     const p = numeroOuNulo(periodo);
     const r = numeroOuNulo(raio);
     const a = numeroOuNulo(ano);
-    if (typeof nome !== "string" || p === null || r === null || a === null || p <= 0 || r <= 0) {
+    if (
+      typeof nome !== "string" ||
+      typeof medido !== "boolean" ||
+      p === null ||
+      r === null ||
+      a === null ||
+      p <= 0 ||
+      r <= 0
+    ) {
       throw new ErroDados(`planeta inválido em planetas.json: ${String(nome)}`, "planetas");
     }
     planetas.push({
@@ -47,6 +62,7 @@ export function lerPlanetas(bruto: unknown): Planeta[] {
       massa: numeroOuNulo(massa),
       temperatura: numeroOuNulo(temperatura),
       distancia: numeroOuNulo(distancia),
+      medido,
       classe: classificar(r),
     });
   }
@@ -57,6 +73,8 @@ export interface Filtro {
   classes: ReadonlySet<IdClasse>;
   anoMinimo: number;
   soComMassa: boolean;
+  /** Falso: só os planetas de raio medido (os do README). Verdadeiro: inclui os de raio estimado. */
+  incluirEstimados: boolean;
   busca: string;
 }
 
@@ -76,14 +94,20 @@ function normalizar(texto: string): string {
   return normalizado;
 }
 
+/** O nome contém o texto buscado (sem acentos e sem diferenciar maiúsculas)? Busca vazia casa com tudo. */
+export function casaComABusca(planeta: Planeta, busca: string): boolean {
+  const termo = normalizar(busca);
+  return termo === "" || normalizar(planeta.nome).includes(termo);
+}
+
 export function filtrar(planetas: readonly Planeta[], filtro: Filtro): Planeta[] {
-  const busca = normalizar(filtro.busca);
   return planetas.filter(
     (p) =>
+      (filtro.incluirEstimados || p.medido) &&
       filtro.classes.has(p.classe) &&
       p.ano >= filtro.anoMinimo &&
       (!filtro.soComMassa || p.massa !== null) &&
-      (busca === "" || normalizar(p.nome).includes(busca)),
+      casaComABusca(p, filtro.busca),
   );
 }
 

@@ -13,6 +13,8 @@ export interface Planeta {
   temperatura: number | null;
   /** parsecs */
   distancia: number | null;
+  /** O raio veio de um trânsito. Se for falso, é uma estimativa por relação massa-raio. */
+  medido: boolean;
   classe: IdClasse;
 }
 

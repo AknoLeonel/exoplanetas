@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { classificar } from "../../src/lib/planetas";
 import type { Descobertas, Metricas, Planeta } from "../../src/lib/tipos";
 
@@ -13,6 +14,7 @@ export function planetasDeTeste(n = 60): Planeta[] {
       massa: i % 3 === 0 ? 1 + i : null,
       temperatura: i % 5 === 0 ? null : 300 + i * 10,
       distancia: i % 7 === 0 ? null : 10 + i,
+      medido: true,
       classe: classificar(raio),
     };
   });
@@ -73,4 +75,9 @@ export function criarSecao(): HTMLElement {
 
 export function esperar(ms = 40): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** `vi.waitFor` com prazo folgado: com os arquivos de teste rodando em paralelo, 1 s pode não bastar. */
+export function esperarAte<T>(verificacao: () => T | Promise<T>): Promise<T> {
+  return vi.waitFor(verificacao, { timeout: 5000 });
 }
