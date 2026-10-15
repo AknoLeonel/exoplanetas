@@ -3,7 +3,7 @@ import { aoMudarProgresso, type EstadoDoProgresso } from "../../src/data/acompan
 import * as telemetria from "../../src/telemetry";
 import { carregarSecao, importarModulo, iniciarSecao } from "../../src/ui/carga";
 import { h } from "../../src/ui/dom";
-import { criarSecao, esperar } from "./fixtures";
+import { criarSecao, esperar, esperarAte } from "./fixtures";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -103,7 +103,7 @@ describe("carregarSecao", () => {
     const carregar = vi.fn().mockRejectedValueOnce(new Error("sem rede")).mockResolvedValueOnce("agora foi");
     await carregarSecao({ host, nome: "t", carregar, renderizar: (d: string) => h("p", { class: "conteudo" }, d) });
     host.querySelector<HTMLButtonElement>(".erro button")?.click();
-    await vi.waitFor(() => expect(host.querySelector(".conteudo")?.textContent).toBe("agora foi"));
+    await esperarAte(() => expect(host.querySelector(".conteudo")?.textContent).toBe("agora foi"));
     expect(host.querySelector(".erro")).toBeNull();
     expect(carregar).toHaveBeenCalledTimes(2);
     expect(host.getAttribute("aria-busy")).toBe("false");
@@ -114,9 +114,9 @@ describe("carregarSecao", () => {
     const carregar = vi.fn().mockRejectedValue(new Error("falha"));
     await carregarSecao({ host, nome: "t", carregar, renderizar: () => h("div") });
     host.querySelector<HTMLButtonElement>(".erro button")?.click();
-    await vi.waitFor(() => expect(carregar).toHaveBeenCalledTimes(2));
-    await vi.waitFor(() => expect(host.querySelectorAll(".erro")).toHaveLength(1));
-    await vi.waitFor(() => expect(host.querySelector("[data-skeleton]")).toBeNull());
+    await esperarAte(() => expect(carregar).toHaveBeenCalledTimes(2));
+    await esperarAte(() => expect(host.querySelectorAll(".erro")).toHaveLength(1));
+    await esperarAte(() => expect(host.querySelector("[data-skeleton]")).toBeNull());
   });
 
   it("o botão 'Tentar de novo' desativa no primeiro clique: cliques repetidos não abrem outra tentativa", async () => {
@@ -128,7 +128,7 @@ describe("carregarSecao", () => {
     expect(botao.disabled).toBe(true);
     botao.click();
     botao.dispatchEvent(new MouseEvent("click"));
-    await vi.waitFor(() => expect(host.querySelectorAll(".conteudo")).toHaveLength(1));
+    await esperarAte(() => expect(host.querySelectorAll(".conteudo")).toHaveLength(1));
     expect(carregar).toHaveBeenCalledTimes(2);
     expect(host.querySelectorAll("[data-skeleton]")).toHaveLength(0);
   });
@@ -182,7 +182,7 @@ describe("iniciarSecao", () => {
     const botao = host.querySelector<HTMLButtonElement>(".erro button") as HTMLButtonElement;
     botao.click();
     botao.click();
-    await vi.waitFor(() => expect(montar).toHaveBeenCalledTimes(1));
+    await esperarAte(() => expect(montar).toHaveBeenCalledTimes(1));
     expect(importar).toHaveBeenCalledTimes(2);
     expect(host.querySelector(".erro")).toBeNull();
     expect(host.getAttribute("aria-busy")).toBe("true");

@@ -26,13 +26,20 @@ export function lerPlanetas(bruto: unknown): Planeta[] {
   if (!obj || !Array.isArray(obj.colunas) || !Array.isArray(obj.linhas)) {
     throw new ErroDados("planetas.json fora do formato esperado", "planetas");
   }
-  if (COLUNAS.some((c, i) => obj.colunas && (obj.colunas as unknown[])[i] !== c)) {
+  const colunas = obj.colunas as unknown[];
+  const iguaisAs = (esperadas: readonly string[]) =>
+    esperadas.length === colunas.length && esperadas.every((c, i) => colunas[i] === c);
+  // O CDN pode servir por até uma hora um planetas.json da versão anterior (sem `medido`) junto do código novo.
+  // Naquele arquivo todos os raios eram medidos, então é seguro tratá-los assim.
+  const versaoAnterior = iguaisAs(COLUNAS.slice(0, -1));
+  if (!versaoAnterior && !iguaisAs(COLUNAS)) {
     throw new ErroDados("planetas.json com colunas diferentes das esperadas", "planetas");
   }
   const planetas: Planeta[] = [];
   for (const linha of obj.linhas as unknown[]) {
     if (!Array.isArray(linha)) throw new ErroDados("linha inválida em planetas.json", "planetas");
-    const [nome, ano, periodo, raio, massa, temperatura, distancia, medido] = linha as unknown[];
+    const [nome, ano, periodo, raio, massa, temperatura, distancia, medidoLido] = linha as unknown[];
+    const medido = versaoAnterior ? true : medidoLido;
     const p = numeroOuNulo(periodo);
     const r = numeroOuNulo(raio);
     const a = numeroOuNulo(ano);

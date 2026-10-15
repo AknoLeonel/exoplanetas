@@ -31,7 +31,7 @@ def planetas_com_raio(df: pd.DataFrame) -> dict:
     planetas o arquivo da NASA estima o raio por uma relação massa-raio, e o site os mostra à parte.
     """
     t = df[df["pl_orbper"].gt(0) & df["pl_rade"].gt(0)].sort_values("pl_name")
-    t = t.assign(massa=t["pl_bmasse"].where(t["pl_bmassprov"] == "Mass"), medido=t["discoverymethod"].eq("Transit"))
+    t = t.assign(massa=t["pl_bmasse"].where(t["pl_bmassprov"] == "Mass"), medido=analise.raio_e_medido(t))
     linhas = [
         [
             str(r.pl_name),

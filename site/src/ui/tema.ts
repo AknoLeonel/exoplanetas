@@ -1,6 +1,8 @@
 export type Tema = "claro" | "escuro";
 
-const CHAVE = "tema";
+/** Chave do localStorage. O script do <head> do index.html usa a mesma (um teste confere). */
+export const CHAVE_DO_TEMA = "tema";
+const CHAVE = CHAVE_DO_TEMA;
 
 function guardado(janela: Window): Tema | null {
   try {
@@ -15,16 +17,27 @@ function guardado(janela: Window): Tema | null {
 export function temaAtual(janela: Window = window): Tema {
   const manual = janela.document.documentElement.dataset.tema;
   if (manual === "claro" || manual === "escuro") return manual;
+  return doSistema(janela);
+}
+
+function doSistema(janela: Window): Tema {
   return janela.matchMedia?.("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
 }
 
+/**
+ * Aplica o tema e o lembra. Se a escolha é igual ao tema do sistema, a escolha manual some e a página volta
+ * a acompanhar o sistema: é assim que se desfaz uma escolha, sem precisar de um terceiro botão.
+ */
 function aplicar(janela: Window, tema: Tema): void {
-  janela.document.documentElement.dataset.tema = tema;
+  const acompanhaOSistema = tema === doSistema(janela);
   try {
-    janela.localStorage.setItem(CHAVE, tema);
+    if (acompanhaOSistema) janela.localStorage.removeItem(CHAVE);
+    else janela.localStorage.setItem(CHAVE, tema);
   } catch {
     // Sem armazenamento (janela privada, por exemplo) a escolha vale só nesta visita.
   }
+  if (acompanhaOSistema) delete janela.document.documentElement.dataset.tema;
+  else janela.document.documentElement.dataset.tema = tema;
   // O gráfico em canvas não enxerga o CSS mudar sozinho: ele escuta este evento para redesenhar.
   janela.dispatchEvent(new Event("tema-alterado"));
 }

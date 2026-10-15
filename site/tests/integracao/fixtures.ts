@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { classificar } from "../../src/lib/planetas";
 import type { Descobertas, Metricas, Planeta } from "../../src/lib/tipos";
 
@@ -74,4 +75,9 @@ export function criarSecao(): HTMLElement {
 
 export function esperar(ms = 40): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** `vi.waitFor` com prazo folgado: com os arquivos de teste rodando em paralelo, 1 s pode não bastar. */
+export function esperarAte<T>(verificacao: () => T | Promise<T>): Promise<T> {
+  return vi.waitFor(verificacao, { timeout: 5000 });
 }

@@ -3,15 +3,18 @@ import { escalaLog } from "../../src/lib/escala";
 import type { Planeta } from "../../src/lib/tipos";
 import { montarExplorador } from "../../src/ui/explorador";
 import { DOMINIO_PERIODO, DOMINIO_RAIO } from "../../src/ui/grafico-periodo-raio";
-import { esperar, planetasDeTeste } from "./fixtures";
+import { esperar, esperarAte, planetasDeTeste } from "./fixtures";
 
 const LARGURA = 800;
 const ALTURA = 400;
 
 type Contexto2d = Record<string, unknown> & { arc: ReturnType<typeof vi.fn>; fillText: ReturnType<typeof vi.fn> };
 let contexto: Contexto2d;
+/** Cada atribuição a uma propriedade do contexto 2D, na ordem (por exemplo, globalAlpha). */
+let atribuicoes: [string, unknown][] = [];
 
 beforeEach(() => {
+  atribuicoes = [];
   // Canvas de mentira que só registra as chamadas.
   const chamadas: Record<string, ReturnType<typeof vi.fn>> = {};
   const valores: Record<string, unknown> = {};
@@ -22,6 +25,7 @@ beforeEach(() => {
       return chamadas[chave];
     },
     set(alvo, chave: string, valor) {
+      atribuicoes.push([chave, valor]);
       alvo[chave] = valor;
       return true;
     },
@@ -93,7 +97,7 @@ describe("explorador", () => {
     const raiz = montar();
     for (const f of raiz.querySelectorAll<HTMLButtonElement>(".ficha")) f.click();
     expect(resumo(raiz)).toBe("Mostrando 0 de 60 planetas com raio medido.");
-    await vi.waitFor(() => expect(raiz.querySelector(".vazio")?.textContent).toBe("Nenhum planeta com esses filtros."));
+    await esperarAte(() => expect(raiz.querySelector(".vazio")?.textContent).toBe("Nenhum planeta com esses filtros."));
     expect(raiz.querySelector<HTMLButtonElement>(".mais button")?.hidden).toBe(true);
   });
 
@@ -145,7 +149,7 @@ describe("explorador", () => {
     caixa.checked = true;
     caixa.dispatchEvent(new Event("change"));
     expect(raiz.querySelector("tbody")?.dataset.anim).toBe("saindo");
-    await vi.waitFor(() => expect(raiz.querySelector("tbody")?.dataset.anim).toBe("pronto"));
+    await esperarAte(() => expect(raiz.querySelector("tbody")?.dataset.anim).toBe("pronto"));
   });
 });
 
@@ -159,7 +163,7 @@ describe("tabela do explorador", () => {
       .waitFor(() => expect(linhas(raiz)).toBe(40))
       .then(async () => {
         botao.click();
-        await vi.waitFor(() => expect(linhas(raiz)).toBe(60));
+        await esperarAte(() => expect(linhas(raiz)).toBe(60));
         expect(botao.hidden).toBe(true);
       });
   });
@@ -171,16 +175,16 @@ describe("tabela do explorador", () => {
     expect(th("Ano").getAttribute("aria-sort")).toBe("descending");
     expect(th("Planeta").getAttribute("aria-sort")).toBe("none");
     th("Planeta").querySelector("button")?.click();
-    await vi.waitFor(() => expect(th("Planeta").getAttribute("aria-sort")).toBe("ascending"));
-    await vi.waitFor(() => expect(raiz.querySelector("tbody td")?.textContent).toBe("Teste-1 b"));
+    await esperarAte(() => expect(th("Planeta").getAttribute("aria-sort")).toBe("ascending"));
+    await esperarAte(() => expect(raiz.querySelector("tbody td")?.textContent).toBe("Teste-1 b"));
     expect(th("Ano").getAttribute("aria-sort")).toBe("none");
     th("Planeta").querySelector("button")?.click();
-    await vi.waitFor(() => expect(th("Planeta").getAttribute("aria-sort")).toBe("descending"));
-    await vi.waitFor(() => expect(raiz.querySelector("tbody td")?.textContent).toBe("Teste-60 b"));
+    await esperarAte(() => expect(th("Planeta").getAttribute("aria-sort")).toBe("descending"));
+    await esperarAte(() => expect(raiz.querySelector("tbody td")?.textContent).toBe("Teste-60 b"));
     th("Raio (Terra = 1)").querySelector("button")?.click();
-    await vi.waitFor(() => expect(th("Raio (Terra = 1)").getAttribute("aria-sort")).toBe("descending"));
+    await esperarAte(() => expect(th("Raio (Terra = 1)").getAttribute("aria-sort")).toBe("descending"));
     const maior = Math.max(...planetas.map((p) => p.raio));
-    await vi.waitFor(() =>
+    await esperarAte(() =>
       expect(raiz.querySelectorAll("tbody tr")[0]?.querySelectorAll("td")[3]?.textContent).toBe(
         maior >= 100 ? String(Math.round(maior)) : maior.toFixed(maior >= 10 ? 1 : 2).replace(".", ","),
       ),
@@ -432,6 +436,20 @@ describe("raio medido × estimado, busca que destaca e °C", () => {
     busca.dispatchEvent(new Event("input"));
     expect(resumo(raiz)).toBe("Mostrando 20 de 20 planetas com raio medido.");
     expect(raiz.querySelector("canvas")?.getAttribute("aria-label")).not.toContain("destacados");
+  });
+
+  it("uma busca sem resultado também esmaece o gráfico, para ele não parecer sem filtro", async () => {
+    const raiz = montarMisto();
+    await esperar(60);
+    expect(atribuicoes.some(([k, v]) => k === "globalAlpha" && v === 0.22)).toBe(false);
+    const busca = raiz.querySelector<HTMLInputElement>("#filtro-busca") as HTMLInputElement;
+    busca.value = "zzz-nenhum";
+    busca.dispatchEvent(new Event("input"));
+    await esperar(60);
+    expect(atribuicoes.some(([k, v]) => k === "globalAlpha" && v === 0.22)).toBe(true);
+    expect(raiz.querySelector("canvas")?.getAttribute("aria-label")).toContain("0 destacados pela busca");
+    expect(resumo(raiz)).toContain("A busca destaca 0 no gráfico");
+    expect(raiz.querySelectorAll("tbody tr:not(:has(.vazio))")).toHaveLength(0);
   });
 
   it("o gráfico redesenha com as cores novas quando o tema muda pelo botão", async () => {

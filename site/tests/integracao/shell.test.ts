@@ -9,7 +9,7 @@ import {
   montarShell,
   type Shell,
 } from "../../src/ui/shell";
-import { esperar } from "./fixtures";
+import { esperar, esperarAte } from "./fixtures";
 
 let shell: Shell | null = null;
 let palco: HTMLElement;
@@ -61,7 +61,7 @@ describe("shell", () => {
     const inicio = falso();
     iniciar({ inicio: async () => inicio, catalogo: async () => falso() });
     expect(modulo()?.dataset.modulo).toBe("inicio");
-    await vi.waitFor(() => expect(conteudo()?.textContent).toBe("pronto"));
+    await esperarAte(() => expect(conteudo()?.textContent).toBe("pronto"));
     expect(inicio.montar).toHaveBeenCalledOnce();
     expect(palco.querySelector("[data-skeleton]")).toBeNull();
     expect(document.title).toBe("Exoplanetas");
@@ -72,7 +72,7 @@ describe("shell", () => {
     window.location.hash = "#/catalogo?modo=explorar&busca=kepler";
     const catalogo = falso();
     iniciar({ inicio: async () => falso(), catalogo: async () => catalogo });
-    await vi.waitFor(() => expect(conteudo()?.dataset.params).toBe('{"busca":"kepler"}'));
+    await esperarAte(() => expect(conteudo()?.dataset.params).toBe('{"busca":"kepler"}'));
     expect(conteudo()?.dataset.modo).toBe("explorar");
     expect(document.title).toBe("Catálogo de exoplanetas · Exoplanetas");
     const ativo = navegacao.querySelector('a[aria-current="page"]');
@@ -83,11 +83,11 @@ describe("shell", () => {
 
   it("mudar o hash troca de módulo, com foco, rolagem e anúncio", async () => {
     iniciar({ inicio: async () => falso(), catalogo: async () => falso() });
-    await vi.waitFor(() => expect(conteudo()).not.toBeNull());
+    await esperarAte(() => expect(conteudo()).not.toBeNull());
     window.location.hash = "#/catalogo";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
-    await vi.waitFor(() => expect(modulo()?.dataset.modulo).toBe("catalogo"));
-    await vi.waitFor(() => expect(anuncio.textContent).toBe("Página: Catálogo de exoplanetas"));
+    await esperarAte(() => expect(modulo()?.dataset.modulo).toBe("catalogo"));
+    await esperarAte(() => expect(anuncio.textContent).toBe("Página: Catálogo de exoplanetas"));
     expect(window.scrollTo).toHaveBeenCalled();
     expect(document.activeElement).toBe(palco);
     expect(palco.querySelectorAll(".modulo")).toHaveLength(1);
@@ -97,7 +97,7 @@ describe("shell", () => {
     window.location.hash = "#/catalogo";
     const catalogo = falso();
     iniciar({ inicio: async () => falso(), catalogo: async () => catalogo });
-    await vi.waitFor(() => expect(catalogo.montar).toHaveBeenCalledOnce());
+    await esperarAte(() => expect(catalogo.montar).toHaveBeenCalledOnce());
     window.location.hash = "#explorar";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
     await esperar(60);
@@ -109,7 +109,7 @@ describe("shell", () => {
     window.location.hash = "#/transito";
     const inicio = falso();
     iniciar({ inicio: async () => inicio, catalogo: async () => falso() });
-    await vi.waitFor(() => expect(inicio.montar).toHaveBeenCalledOnce());
+    await esperarAte(() => expect(inicio.montar).toHaveBeenCalledOnce());
     expect(modulo()?.dataset.modulo).toBe("inicio");
   });
 
@@ -123,7 +123,7 @@ describe("shell", () => {
     await esperar(30);
     window.location.hash = "#/";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
-    await vi.waitFor(() => expect(inicio.montar).toHaveBeenCalledOnce());
+    await esperarAte(() => expect(inicio.montar).toHaveBeenCalledOnce());
     liberar(catalogo);
     await esperar(60);
     expect(modulo()?.dataset.modulo).toBe("inicio");
@@ -134,9 +134,9 @@ describe("shell", () => {
     window.location.hash = "#/catalogo";
     const carregar = vi.fn().mockRejectedValueOnce(new Error("rede caiu")).mockResolvedValue(falso());
     iniciar({ inicio: async () => falso(), catalogo: carregar });
-    await vi.waitFor(() => expect(palco.querySelector(".erro")?.textContent).toContain("rede caiu"));
+    await esperarAte(() => expect(palco.querySelector(".erro")?.textContent).toContain("rede caiu"));
     palco.querySelector<HTMLButtonElement>(".erro button")?.click();
-    await vi.waitFor(() => expect(conteudo()?.textContent).toBe("pronto"));
+    await esperarAte(() => expect(conteudo()?.textContent).toBe("pronto"));
     expect(carregar).toHaveBeenCalledTimes(2);
   });
 
@@ -144,7 +144,7 @@ describe("shell", () => {
     window.location.hash = "#/catalogo?a=1";
     const catalogo = falso();
     const s = iniciar({ inicio: async () => falso(), catalogo: async () => catalogo });
-    await vi.waitFor(() => expect(catalogo.montar).toHaveBeenCalledOnce());
+    await esperarAte(() => expect(catalogo.montar).toHaveBeenCalledOnce());
     const ctx = catalogo.montar.mock.calls[0]?.[0] as ContextoDoModulo;
     ctx.definirParametros({ b: "2" });
     expect(window.location.hash).toBe("#/catalogo?a=1&b=2");
@@ -159,13 +159,13 @@ describe("shell", () => {
     const telemetria = await import("../../src/telemetry");
     const espiao = vi.spyOn(telemetria, "evento");
     iniciar({ inicio: async () => falso(), catalogo: async () => falso() });
-    await vi.waitFor(() => expect(espiao).toHaveBeenCalledWith("navegacao", { modulo: "inicio", modo: "explorar" }));
+    await esperarAte(() => expect(espiao).toHaveBeenCalledWith("navegacao", { modulo: "inicio", modo: "explorar" }));
   });
 
   it("âncoras com data-ancora rolam até o alvo e focam, sem mudar a rota", async () => {
     window.location.hash = "#/catalogo";
     iniciar({ inicio: async () => falso(), catalogo: async () => falso() });
-    await vi.waitFor(() => expect(conteudo()).not.toBeNull());
+    await esperarAte(() => expect(conteudo()).not.toBeNull());
     const alvo = h("section", { id: "secao-alvo" });
     alvo.scrollIntoView = vi.fn();
     document.body.append(alvo, h("a", { id: "ancora", href: "#secao-alvo", "data-ancora": "secao-alvo" }, "ir"));
@@ -191,7 +191,7 @@ describe("shell", () => {
   it("parar remove os ouvintes: o hash deixa de abrir módulos", async () => {
     const catalogo = falso();
     const s = iniciar({ inicio: async () => falso(), catalogo: async () => catalogo });
-    await vi.waitFor(() => expect(conteudo()).not.toBeNull());
+    await esperarAte(() => expect(conteudo()).not.toBeNull());
     s.parar();
     window.location.hash = "#/catalogo";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -211,7 +211,7 @@ describe("alternador Aprender/Explorar no shell", () => {
       window.location.hash = "#/catalogo?modo=aprender&x=7";
       const catalogo = falso();
       iniciar({ inicio: async () => falso(), catalogo: async () => catalogo });
-      await vi.waitFor(() => expect(conteudo()?.dataset.modo).toBe("aprender"));
+      await esperarAte(() => expect(conteudo()?.dataset.modo).toBe("aprender"));
       const botoes = palco.querySelectorAll<HTMLButtonElement>(".alternador-opcao");
       expect([...botoes].map((b) => [b.textContent, b.getAttribute("aria-pressed")])).toEqual([
         ["Aprender", "true"],
@@ -221,7 +221,7 @@ describe("alternador Aprender/Explorar no shell", () => {
       botoes[1]?.click();
       expect(window.location.hash).toBe("#/catalogo?x=7");
       window.dispatchEvent(new HashChangeEvent("hashchange"));
-      await vi.waitFor(() => expect(conteudo()?.dataset.modo).toBe("explorar"));
+      await esperarAte(() => expect(conteudo()?.dataset.modo).toBe("explorar"));
       expect(conteudo()?.dataset.params).toBe('{"x":"7"}');
       expect(catalogo.montar).toHaveBeenCalledTimes(2);
     } finally {
@@ -232,7 +232,7 @@ describe("alternador Aprender/Explorar no shell", () => {
   it("um módulo com um só modo não mostra o alternador, e um modo não suportado vira o suportado", async () => {
     window.location.hash = "#/catalogo?modo=aprender";
     iniciar({ inicio: async () => falso(), catalogo: async () => falso() });
-    await vi.waitFor(() => expect(conteudo()?.dataset.modo).toBe("explorar"));
+    await esperarAte(() => expect(conteudo()?.dataset.modo).toBe("explorar"));
     expect(palco.querySelector(".alternador")).toBeNull();
   });
 });

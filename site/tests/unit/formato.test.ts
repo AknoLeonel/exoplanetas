@@ -40,6 +40,8 @@ describe("formato", () => {
     expect(celsius(288)).toBe("15 °C");
     expect(celsius(314.6)).toBe("41 °C");
     expect(celsius(80)).toBe("-193 °C");
+    expect(celsius(273)).toBe("0 °C"); // nunca "-0 °C"
+    expect(celsius(272.9)).toBe("0 °C");
     expect(celsius(1500)).toBe("1.227 °C");
   });
 

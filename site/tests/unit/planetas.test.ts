@@ -97,6 +97,13 @@ describe("lerPlanetas", () => {
     expect(() => lerPlanetas(bruto([["E b", 2010, 2, 1, null, null, null]]))).toThrow(ErroDados);
   });
 
+  it("aceita o planetas.json da versão anterior (7 colunas) e trata os raios como medidos", () => {
+    const antigo = { colunas: COLUNAS.slice(0, 7), linhas: [["Velho b", 2010, 2, 1, null, null, null]] };
+    expect(lerPlanetas(antigo)[0]?.medido).toBe(true);
+    expect(() => lerPlanetas({ colunas: COLUNAS.slice(0, 6), linhas: [] })).toThrow(ErroDados);
+    expect(() => lerPlanetas({ colunas: [...COLUNAS, "extra"], linhas: [] })).toThrow(ErroDados);
+  });
+
   it("aceita lista vazia", () => {
     expect(lerPlanetas(bruto([]))).toEqual([]);
   });

@@ -34,7 +34,9 @@ export function eixo(n: number): string {
 
 /** Kelvin para graus Celsius, arredondado: 288 K -> "15 °C". */
 export function celsius(kelvin: number): string {
-  return `${milhar(Math.round(kelvin - 273.15))} °C`;
+  const graus = Math.round(kelvin - 273.15);
+  // Math.round(-0.15) é -0, e o formatador imprimiria "-0".
+  return `${milhar(graus === 0 ? 0 : graus)} °C`;
 }
 
 /** Parsecs para anos-luz, arredondado: 12.43 pc -> "41 anos-luz". */

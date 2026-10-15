@@ -101,7 +101,7 @@ export function montarExplorador(planetas: readonly Planeta[]): HTMLElement {
     const noGrafico = filtrar(planetas, { ...recorte, busca: "" });
     const naTabela = filtrar(planetas, recorte);
     const buscando = filtro.busca.trim() !== "";
-    const destaques: ReadonlySet<string> = buscando ? new Set(naTabela.map((p) => p.nome)) : new Set();
+    const destaques: ReadonlySet<string> | null = buscando ? new Set(naTabela.map((p) => p.nome)) : null;
     // As contagens das fichas ignoram a própria seleção de classes, para mostrar o que cada ficha traria.
     const semClasses = contarPorClasse(filtrar(planetas, { ...recorte, busca: "", classes: TODAS }));
     for (const [id, ficha] of fichas) ficha.contagem.textContent = milhar(semClasses[id]);
@@ -110,7 +110,7 @@ export function montarExplorador(planetas: readonly Planeta[]): HTMLElement {
     const base = planetas.filter((p) => filtro.incluirEstimados || p.medido).length;
     const origem = filtro.incluirEstimados ? "com raio medido ou estimado" : "com raio medido";
     resumo.textContent = `Mostrando ${milhar(noGrafico.length)} de ${milhar(base)} planetas ${origem}.${
-      buscando ? ` A busca destaca ${milhar(destaques.size)} no gráfico e filtra a tabela.` : ""
+      destaques ? ` A busca destaca ${milhar(destaques.size)} no gráfico e filtra a tabela.` : ""
     }`;
   }
 

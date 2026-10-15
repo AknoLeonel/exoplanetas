@@ -52,12 +52,17 @@ def kepler_por_ano(df: pd.DataFrame, anos: list[int]) -> dict[str, dict[str, int
     return out
 
 
+def raio_e_medido(df: pd.DataFrame) -> pd.Series:
+    """O raio veio de um trânsito? Nos demais métodos o arquivo estima o raio por uma relação massa-raio."""
+    return df["discoverymethod"] == "Transit"
+
+
 def com_raio_medido(df: pd.DataFrame) -> pd.DataFrame:
     """Planetas de trânsito: o único método que mede o raio.
 
     Nos demais, o arquivo preenche o raio com uma relação massa-raio.
     """
-    return df[(df["discoverymethod"] == "Transit") & df["pl_rade"].notna()]
+    return df[raio_e_medido(df) & df["pl_rade"].notna()]
 
 
 def contagem_por_tamanho(df: pd.DataFrame) -> dict[str, int]:

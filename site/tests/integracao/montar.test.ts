@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { criarSecao, descobertasDeTeste, metricasDeTeste, planetasDeTeste } from "./fixtures";
+import { criarSecao, descobertasDeTeste, esperarAte, metricasDeTeste, planetasDeTeste } from "./fixtures";
 
 const COLUNAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia", "medido"];
 
@@ -145,7 +145,7 @@ describe("montar cada seção (dados reais do pipeline pela rede, DOM de verdade
     expect(host.querySelector(".erro")?.textContent).toContain("HTTP 404");
     servir({ "/dados/metricas.json": metricasDeTeste });
     host.querySelector<HTMLButtonElement>(".erro button")?.click();
-    await vi.waitFor(() => expect(host.querySelectorAll(".lista-terra li")).toHaveLength(2));
+    await esperarAte(() => expect(host.querySelectorAll(".lista-terra li")).toHaveLength(2));
   });
 
   it("resumo, modelo e terra compartilham um único download de metricas.json", async () => {

@@ -33,6 +33,13 @@ def test_planetas_com_periodo_e_raio_e_marca_os_de_raio_estimado():
     assert all(len(linha) == len(site.COLUNAS_PLANETAS) for linha in out["linhas"])
 
 
+def test_a_origem_do_raio_segue_o_mesmo_predicado_da_analise():
+    df = _com_um_planeta_radial()
+    medidos = set(analise.com_raio_medido(df)["pl_name"])
+    do_site = {linha[0] for linha in site.planetas_com_raio(df)["linhas"] if linha[-1]}
+    assert do_site == medidos - {"Sem periodo b"}  # o sem período não entra no gráfico
+
+
 def test_planeta_sem_raio_fica_de_fora():
     df = sintetico(n=5)
     df.loc[0, "pl_rade"] = float("nan")
