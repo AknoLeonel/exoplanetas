@@ -100,7 +100,7 @@ Para atualizar os dados: Actions → **Coletar dados da NASA** → Run workflow.
 
 ## Site interativo
 
-Em [`site/`](site/) há uma vitrine web dos resultados (Vite + TypeScript): o diagrama período × raio com hover, filtros e tabela, as descobertas por ano e os resultados do modelo. Os dados vêm do pipeline (`site/public/dados/*.json`), então nenhum número é digitado à mão.
+Em [`site/`](site/) fica o **laboratório de astrofísica**: cada módulo tem o modo *Aprender* (guiado) e o *Explorar* (livre), e o primeiro módulo é uma vitrine web dos resultados (Vite + TypeScript): o diagrama período × raio com hover, filtros e tabela, as descobertas por ano e os resultados do modelo. Os dados vêm do pipeline (`site/public/dados/*.json`), então nenhum número é digitado à mão.
 
 ```bash
 python -m exoplanetas.pipeline     # regenera também site/public/dados/

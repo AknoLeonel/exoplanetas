@@ -25,23 +25,15 @@
   white-space: nowrap;
 }
 
-.topo nav a:not(.marca) {
+.topo nav .github {
+  margin-left: auto;
   color: var(--texto-2);
   text-decoration: none;
   font-size: 0.9rem;
   white-space: nowrap;
-  transition: color var(--dur-rapida) var(--curva-entrada);
 }
 
-.topo nav a:not(.marca):hover {
-  color: var(--texto);
-}
-
-.topo .github {
-  margin-left: auto;
-}
-
-main {
+.palco {
   max-width: 1120px;
   margin: 0 auto;
   padding: 0 16px 80px;
