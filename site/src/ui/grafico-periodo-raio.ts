@@ -1,5 +1,5 @@
 import { escalaLog, maisProximo, marcasLog, type Ponto } from "../lib/escala";
-import { anosLuz, compacto, eixo, milhar } from "../lib/formato";
+import { anosLuz, celsius, compacto, eixo, milhar } from "../lib/formato";
 import type { Planeta } from "../lib/tipos";
 import { type Cores, lerCores } from "./cores";
 import { h } from "./dom";
@@ -17,7 +17,8 @@ const RAIO_DO_PONTO = 2.4;
 const ALCANCE = 16;
 
 export interface GraficoPeriodoRaio {
-  atualizar(planetas: readonly Planeta[]): void;
+  /** `destaques`: nomes a realçar (a busca); com algum, os demais pontos ficam esmaecidos. */
+  atualizar(planetas: readonly Planeta[], destaques?: ReadonlySet<string>): void;
   destruir(): void;
 }
 
@@ -29,9 +30,12 @@ function conteudoDoTooltip(p: Planeta): HTMLElement {
   const linhas = [
     linhaDoTooltip("Descoberta", String(p.ano)),
     linhaDoTooltip("Período", `${compacto(p.periodo)} dias`),
-    linhaDoTooltip("Raio", `${compacto(p.raio)}× a Terra`),
+    linhaDoTooltip("Raio", `${compacto(p.raio)}× a Terra${p.medido ? "" : " (estimado)"}`),
     linhaDoTooltip("Massa", p.massa === null ? "não medida" : `${compacto(p.massa)}× a Terra`),
-    linhaDoTooltip("Temperatura", p.temperatura === null ? "—" : `${milhar(p.temperatura)} K`),
+    linhaDoTooltip(
+      "Temperatura",
+      p.temperatura === null ? "—" : `${milhar(p.temperatura)} K (${celsius(p.temperatura)})`,
+    ),
     linhaDoTooltip("Distância", p.distancia === null ? "—" : anosLuz(p.distancia)),
   ];
   return h("div", {}, h("strong", {}, p.nome), h("dl", {}, ...linhas.flat()));
@@ -48,6 +52,7 @@ export function criarGrafico(host: HTMLElement): GraficoPeriodoRaio {
   const contexto = canvas.getContext("2d");
 
   let planetas: readonly Planeta[] = [];
+  let destaques: ReadonlySet<string> = new Set();
   let pontos: Ponto[] = [];
   let destacado = -1;
   let largura = 0;
@@ -122,21 +127,46 @@ export function criarGrafico(host: HTMLElement): GraficoPeriodoRaio {
     contexto.fillText("Raio (Terra = 1)", 0, 0);
     contexto.restore();
 
-    // Pontos, uma passada por classe para trocar o estilo só cinco vezes.
-    contexto.globalAlpha = 0.8;
+    // Pontos, uma passada por classe e origem do raio: cheios quando medido, vazados quando estimado.
+    // Com uma busca ativa, tudo fica esmaecido e só os planetas buscados são realçados depois.
+    const buscando = destaques.size > 0;
+    contexto.globalAlpha = buscando ? 0.22 : 0.8;
+    contexto.lineWidth = 1.2;
     for (const classe of Object.keys(cores.classes) as (keyof typeof cores.classes)[]) {
-      contexto.fillStyle = cores.classes[classe];
-      contexto.beginPath();
-      for (let i = 0; i < planetas.length; i++) {
-        const p = pontos[i];
-        if (p && planetas[i]?.classe === classe) {
-          contexto.moveTo(p.x + RAIO_DO_PONTO, p.y);
-          contexto.arc(p.x, p.y, RAIO_DO_PONTO, 0, Math.PI * 2);
+      for (const medido of [true, false]) {
+        contexto.beginPath();
+        for (let i = 0; i < planetas.length; i++) {
+          const p = pontos[i];
+          const planeta = planetas[i];
+          if (p && planeta && planeta.classe === classe && planeta.medido === medido) {
+            contexto.moveTo(p.x + RAIO_DO_PONTO, p.y);
+            contexto.arc(p.x, p.y, RAIO_DO_PONTO, 0, Math.PI * 2);
+          }
+        }
+        if (medido) {
+          contexto.fillStyle = cores.classes[classe];
+          contexto.fill();
+        } else {
+          contexto.strokeStyle = cores.classes[classe];
+          contexto.stroke();
         }
       }
-      contexto.fill();
     }
     contexto.globalAlpha = 1;
+    if (buscando) {
+      for (let i = 0; i < planetas.length; i++) {
+        const p = pontos[i];
+        const planeta = planetas[i];
+        if (!p || !planeta || !destaques.has(planeta.nome)) continue;
+        contexto.beginPath();
+        contexto.arc(p.x, p.y, RAIO_DO_PONTO + 2.5, 0, Math.PI * 2);
+        contexto.fillStyle = cores.classes[planeta.classe];
+        contexto.fill();
+        contexto.lineWidth = 1.5;
+        contexto.strokeStyle = cores.texto;
+        contexto.stroke();
+      }
+    }
 
     const alvo = pontos[destacado];
     const planeta = planetas[destacado];
@@ -207,24 +237,27 @@ export function criarGrafico(host: HTMLElement): GraficoPeriodoRaio {
     agendar();
   };
   esquema?.addEventListener("change", aoTrocarDeTema);
+  window.addEventListener("tema-alterado", aoTrocarDeTema);
   medir();
 
   return {
-    atualizar(novos) {
+    atualizar(novos, novosDestaques = new Set()) {
       planetas = novos;
+      destaques = novosDestaques;
       destacado = -1;
       tooltip.esconder();
       posicoes();
       agendar();
       canvas.setAttribute(
         "aria-label",
-        `Diagrama de dispersão do período orbital contra o raio, em escala logarítmica, com ${milhar(novos.length)} planetas. A tabela abaixo lista os mesmos planetas.`,
+        `Diagrama de dispersão do período orbital contra o raio, em escala logarítmica, com ${milhar(novos.length)} planetas${novosDestaques.size > 0 ? `, ${milhar(novosDestaques.size)} destacados pela busca` : ""}. A tabela abaixo lista os planetas que casam com os filtros.`,
       );
     },
     destruir() {
       cancelAnimationFrame(quadro);
       observador?.disconnect();
       esquema?.removeEventListener("change", aoTrocarDeTema);
+      window.removeEventListener("tema-alterado", aoTrocarDeTema);
       canvas.removeEventListener("pointermove", aoMover);
       canvas.removeEventListener("pointerdown", aoMover);
       canvas.removeEventListener("pointerleave", aoSair);

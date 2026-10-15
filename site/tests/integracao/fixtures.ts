@@ -13,6 +13,7 @@ export function planetasDeTeste(n = 60): Planeta[] {
       massa: i % 3 === 0 ? 1 + i : null,
       temperatura: i % 5 === 0 ? null : 300 + i * 10,
       distancia: i % 7 === 0 ? null : 10 + i,
+      medido: true,
       classe: classificar(raio),
     };
   });

@@ -10,6 +10,15 @@
     <meta property="og:description" content="Passe o mouse sobre cada planeta, filtre por tamanho e veja como as descobertas aconteceram." />
     <meta property="og:type" content="website" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8' fill='%232a78d6'/%3E%3Cellipse cx='16' cy='16' rx='15' ry='4.5' fill='none' stroke='%23eb6834' stroke-width='2' transform='rotate(-20 16 16)'/%3E%3C/svg%3E" />
+    <script>
+      // Aplica o tema escolhido antes da primeira pintura, para não piscar o tema errado.
+      try {
+        const tema = localStorage.getItem("tema");
+        if (tema === "claro" || tema === "escuro") document.documentElement.dataset.tema = tema;
+      } catch {
+        // Sem armazenamento (janela privada): vale o tema do sistema.
+      }
+    </script>
     <link rel="stylesheet" href="/src/estilos/site.css" />
   </head>
   <body>
@@ -20,6 +29,7 @@
       <nav aria-label="Módulos">
         <a class="marca" href="#/">Exoplanetas</a>
         <ul class="nav-modulos" id="nav-modulos"></ul>
+        <button class="botao-tema" id="botao-tema" type="button" aria-label="Alternar entre tema claro e escuro">Tema</button>
         <a class="github" href="https://github.com/AknoLeonel/exoplanetas">GitHub</a>
       </nav>
     </header>
@@ -53,8 +63,9 @@
         <header>
           <h2 id="t-explorar">Período × raio: onde estão os planetas</h2>
           <p>
-            Cada ponto é um planeta que passou na frente da estrela, o único jeito de medir o raio direto. Repare no
-            vazio laranja: planetas do tamanho de Netuno quase não existem em órbitas de poucos dias.
+            Cada ponto cheio é um planeta que passou na frente da estrela, o único jeito de medir o raio direto. Os
+            pontos vazados, se você os incluir, têm o raio estimado a partir da massa. Repare no vazio laranja:
+            planetas do tamanho de Netuno quase não existem em órbitas de poucos dias.
           </p>
         </header>
         <div class="painel" data-secao="explorador" aria-busy="true">

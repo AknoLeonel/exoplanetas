@@ -10,7 +10,11 @@ const COLUNAS: { id: ColunaOrdenavel; titulo: string; celula(p: Planeta): string
   { id: "nome", titulo: "Planeta", celula: (p) => p.nome },
   { id: "ano", titulo: "Ano", celula: (p) => String(p.ano) },
   { id: "periodo", titulo: "Período (dias)", celula: (p) => compacto(p.periodo) },
-  { id: "raio", titulo: "Raio (Terra = 1)", celula: (p) => compacto(p.raio) },
+  {
+    id: "raio",
+    titulo: "Raio (Terra = 1)",
+    celula: (p) => (p.medido ? compacto(p.raio) : `${compacto(p.raio)} (est.)`),
+  },
   { id: "massa", titulo: "Massa (Terra = 1)", celula: (p) => (p.massa === null ? "—" : compacto(p.massa)) },
   { id: "temperatura", titulo: "Temp. (K)", celula: (p) => (p.temperatura === null ? "—" : milhar(p.temperatura)) },
   { id: "distancia", titulo: "Distância", celula: (p) => (p.distancia === null ? "—" : anosLuz(p.distancia)) },
@@ -60,7 +64,7 @@ export function criarTabela(): Tabela {
       if (c.id === coluna) c.th.setAttribute("aria-sort", direcao === "asc" ? "ascending" : "descending");
       else c.th.setAttribute("aria-sort", "none");
     }
-    legenda.textContent = `Planetas do gráfico, ordenados por ${COLUNAS.find((c) => c.id === coluna)?.titulo.toLowerCase()}. Mostrando ${milhar(linhas.length)} de ${milhar(planetas.length)}.`;
+    legenda.textContent = `Planetas que passam nos filtros e na busca, ordenados por ${COLUNAS.find((c) => c.id === coluna)?.titulo.toLowerCase()}. Mostrando ${milhar(linhas.length)} de ${milhar(planetas.length)}.`;
     if (linhas.length === 0) {
       corpo.replaceChildren(
         h("tr", {}, h("td", { colspan: COLUNAS.length, class: "vazio" }, "Nenhum planeta com esses filtros.")),

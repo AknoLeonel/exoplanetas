@@ -202,7 +202,7 @@ describe("parecidos com a Terra", () => {
     expect(itens[0]?.querySelector("strong")?.textContent).toBe("Gliese 12 b");
     expect(itens[0]?.textContent).toContain("0,93× a Terra");
     expect(itens[0]?.textContent).toContain("1,62× a da Terra");
-    expect(itens[0]?.textContent).toContain("315 K");
+    expect(itens[0]?.textContent).toContain("315 K (42 °C)");
     expect(itens[0]?.textContent).toContain("40 anos-luz");
   });
 
@@ -211,7 +211,7 @@ describe("parecidos com a Terra", () => {
     const [primeiro] = m.parecidos_com_a_terra_mais_proximos;
     if (primeiro) primeiro.pl_eqt = null;
     const texto = montarTerra(m).querySelector("li")?.textContent ?? "";
-    expect(texto).toContain("Temperatura—");
+    expect(texto).toContain("Temperatura estimada—");
     expect(texto).not.toContain("0 K");
   });
 });

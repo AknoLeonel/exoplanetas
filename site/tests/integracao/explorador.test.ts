@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { escalaLog } from "../../src/lib/escala";
+import type { Planeta } from "../../src/lib/tipos";
 import { montarExplorador } from "../../src/ui/explorador";
 import { DOMINIO_PERIODO, DOMINIO_RAIO } from "../../src/ui/grafico-periodo-raio";
 import { esperar, planetasDeTeste } from "./fixtures";
@@ -128,7 +129,10 @@ describe("explorador", () => {
     const busca = raiz.querySelector<HTMLInputElement>("#filtro-busca") as HTMLInputElement;
     busca.value = "teste-12 ";
     busca.dispatchEvent(new Event("input"));
-    expect(resumo(raiz)).toBe("Mostrando 1 de 60 planetas com raio medido.");
+    // O gráfico continua com todos; a busca só destaca. A tabela é que filtra.
+    expect(resumo(raiz)).toBe(
+      "Mostrando 60 de 60 planetas com raio medido. A busca destaca 1 no gráfico e filtra a tabela.",
+    );
     await esperar(5);
     expect(raiz.querySelector("tbody")?.dataset.anim).toBe("pronto");
     expect(linhas(raiz)).toBe(1);
@@ -186,7 +190,7 @@ describe("tabela do explorador", () => {
   it("a legenda da tabela descreve a ordem e a contagem", () => {
     const raiz = montar();
     expect(raiz.querySelector("caption")?.textContent).toBe(
-      "Planetas do gráfico, ordenados por ano. Mostrando 20 de 60.",
+      "Planetas que passam nos filtros e na busca, ordenados por ano. Mostrando 20 de 60.",
     );
   });
 
@@ -327,5 +331,115 @@ describe("gráfico período × raio", () => {
     expect(corpo.style.getPropertyValue("--origem")).toMatch(/^right/);
     const px = Number(/translate\(([\d.]+)px/.exec(tooltip.style.transform)?.[1]);
     expect(px).toBeLessThan(x(alvo.periodo));
+  });
+});
+
+describe("raio medido × estimado, busca que destaca e °C", () => {
+  function estimado(parcial: Partial<Planeta> & { nome: string }): Planeta {
+    return {
+      ano: 2020,
+      periodo: 10,
+      raio: 2,
+      massa: null,
+      temperatura: null,
+      distancia: null,
+      medido: false,
+      classe: "super-terra",
+      ...parcial,
+    };
+  }
+  const misto: Planeta[] = [
+    ...planetasDeTeste(20),
+    estimado({ nome: "Estimado-1 b", raio: 3.1, periodo: 40, temperatura: 523, classe: "netuno" }),
+    estimado({ nome: "Estimado-2 b", raio: 0.9, periodo: 7, classe: "terra" }),
+  ];
+
+  function montarMisto() {
+    const raiz = montarExplorador(misto);
+    document.body.append(raiz);
+    return raiz;
+  }
+
+  it("por padrão só os de raio medido; a caixa inclui os estimados no gráfico e na tabela", () => {
+    const raiz = montarMisto();
+    expect(resumo(raiz)).toBe("Mostrando 20 de 20 planetas com raio medido.");
+    const caixa = raiz.querySelector<HTMLInputElement>("#filtro-estimados") as HTMLInputElement;
+    caixa.checked = true;
+    caixa.dispatchEvent(new Event("change"));
+    expect(resumo(raiz)).toBe("Mostrando 22 de 22 planetas com raio medido ou estimado.");
+    caixa.checked = false;
+    caixa.dispatchEvent(new Event("change"));
+    expect(resumo(raiz)).toBe("Mostrando 20 de 20 planetas com raio medido.");
+  });
+
+  it("os estimados são desenhados vazados (contorno) e os medidos cheios", async () => {
+    const raiz = montarMisto();
+    await esperar(60);
+    const preenchimentosSo = (contexto.fill as ReturnType<typeof vi.fn>).mock.calls.length;
+    const contornosSo = (contexto.stroke as ReturnType<typeof vi.fn>).mock.calls.length;
+    const caixa = raiz.querySelector<HTMLInputElement>("#filtro-estimados") as HTMLInputElement;
+    caixa.checked = true;
+    caixa.dispatchEvent(new Event("change"));
+    await esperar(60);
+    // Com estimados entram mais contornos de pontos (um traçado por classe presente), e os preenchimentos seguem.
+    expect((contexto.stroke as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(contornosSo);
+    expect((contexto.fill as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(preenchimentosSo);
+  });
+
+  it("o tooltip de um planeta estimado diz que o raio é estimado, e mostra a temperatura também em °C", () => {
+    const raiz = montarMisto();
+    const caixa = raiz.querySelector<HTMLInputElement>("#filtro-estimados") as HTMLInputElement;
+    caixa.checked = true;
+    caixa.dispatchEvent(new Event("change"));
+    const canvas = raiz.querySelector("canvas") as HTMLCanvasElement;
+    const x = escalaLog(DOMINIO_PERIODO, [56, LARGURA - 16]);
+    const y = escalaLog(DOMINIO_RAIO, [ALTURA - 46, 12]);
+    canvas.dispatchEvent(new MouseEvent("pointermove", { clientX: x(40), clientY: y(3.1), bubbles: true }));
+    const tooltip = raiz.querySelector(".tooltip") as HTMLElement;
+    expect(tooltip.querySelector("strong")?.textContent).toBe("Estimado-1 b");
+    expect(tooltip.textContent).toContain("(estimado)");
+    expect(tooltip.textContent).toContain("523 K (250 °C)");
+  });
+
+  it("a tabela marca o raio estimado", () => {
+    const raiz = montarMisto();
+    const caixa = raiz.querySelector<HTMLInputElement>("#filtro-estimados") as HTMLInputElement;
+    caixa.checked = true;
+    caixa.dispatchEvent(new Event("change"));
+    const busca = raiz.querySelector<HTMLInputElement>("#filtro-busca") as HTMLInputElement;
+    busca.value = "Estimado-1";
+    busca.dispatchEvent(new Event("input"));
+    const celulas = [...raiz.querySelectorAll("tbody tr:first-child td")].map((c) => c.textContent);
+    expect(celulas[3]).toBe("3,10 (est.)");
+  });
+
+  it("a busca destaca no gráfico sem tirar os outros pontos, e limpar a busca tira o destaque", async () => {
+    const raiz = montarMisto();
+    await esperar(60);
+    const arcosSemBusca = (contexto.arc as ReturnType<typeof vi.fn>).mock.calls.length;
+    const busca = raiz.querySelector<HTMLInputElement>("#filtro-busca") as HTMLInputElement;
+    busca.value = "teste-3 ";
+    busca.dispatchEvent(new Event("input"));
+    await esperar(60);
+    const casam = misto.filter((p) => p.medido && p.nome.toLowerCase().includes("teste-3")).length;
+    expect(casam).toBeGreaterThan(0);
+    // Todos os pontos continuam desenhados, mais um anel por planeta buscado.
+    const arcosComBusca = (contexto.arc as ReturnType<typeof vi.fn>).mock.calls.length - arcosSemBusca;
+    expect(arcosComBusca).toBe(20 + casam);
+    expect(raiz.querySelector("canvas")?.getAttribute("aria-label")).toContain(`${casam} destacados pela busca`);
+    expect(resumo(raiz)).toContain(`A busca destaca ${casam} no gráfico`);
+    busca.value = "";
+    busca.dispatchEvent(new Event("input"));
+    expect(resumo(raiz)).toBe("Mostrando 20 de 20 planetas com raio medido.");
+    expect(raiz.querySelector("canvas")?.getAttribute("aria-label")).not.toContain("destacados");
+  });
+
+  it("o gráfico redesenha com as cores novas quando o tema muda pelo botão", async () => {
+    montarMisto();
+    await esperar(60);
+    const espiao = vi.spyOn(window, "getComputedStyle");
+    window.dispatchEvent(new Event("tema-alterado"));
+    await esperar(60);
+    expect(espiao).toHaveBeenCalled();
   });
 });

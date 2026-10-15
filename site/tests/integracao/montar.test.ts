@@ -1,12 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { criarSecao, descobertasDeTeste, metricasDeTeste, planetasDeTeste } from "./fixtures";
 
-const COLUNAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia"];
+const COLUNAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia", "medido"];
 
 function planetasJson() {
   return {
     colunas: COLUNAS,
-    linhas: planetasDeTeste(30).map((p) => [p.nome, p.ano, p.periodo, p.raio, p.massa, p.temperatura, p.distancia]),
+    linhas: planetasDeTeste(30).map((p) => [
+      p.nome,
+      p.ano,
+      p.periodo,
+      p.raio,
+      p.massa,
+      p.temperatura,
+      p.distancia,
+      p.medido,
+    ]),
   };
 }
 

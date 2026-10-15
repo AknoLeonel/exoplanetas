@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CLASSES,
+  casaComABusca,
   classificar,
   contarPorClasse,
   type Filtro,
@@ -11,7 +12,7 @@ import {
 } from "../../src/lib/planetas";
 import { ErroDados, type Planeta } from "../../src/lib/tipos";
 
-const COLUNAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia"];
+const COLUNAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia", "medido"];
 
 function bruto(linhas: unknown[]) {
   return { colunas: COLUNAS, linhas };
@@ -25,13 +26,14 @@ function planeta(parcial: Partial<Planeta> & { nome: string }): Planeta {
     massa: null,
     temperatura: null,
     distancia: null,
+    medido: true,
     classe: "netuno",
     ...parcial,
   };
 }
 
 const TODAS = new Set(CLASSES.map((c) => c.id));
-const SEM_FILTRO: Filtro = { classes: TODAS, anoMinimo: 0, soComMassa: false, busca: "" };
+const SEM_FILTRO: Filtro = { classes: TODAS, anoMinimo: 0, soComMassa: false, incluirEstimados: false, busca: "" };
 
 describe("classificar", () => {
   it("usa as fronteiras do pipeline, com limite inferior inclusivo", () => {
@@ -50,7 +52,7 @@ describe("classificar", () => {
 
 describe("lerPlanetas", () => {
   it("converte linhas em planetas tipados, com classe", () => {
-    const [p] = lerPlanetas(bruto([["Kepler-1 b", 2010, 2.47, 1.3, 8.1, 1500, 210.5]]));
+    const [p] = lerPlanetas(bruto([["Kepler-1 b", 2010, 2.47, 1.3, 8.1, 1500, 210.5, true]]));
     expect(p).toEqual({
       nome: "Kepler-1 b",
       ano: 2010,
@@ -59,12 +61,13 @@ describe("lerPlanetas", () => {
       massa: 8.1,
       temperatura: 1500,
       distancia: 210.5,
+      medido: true,
       classe: "super-terra",
     });
   });
 
   it("aceita massa, temperatura e distância ausentes", () => {
-    const [p] = lerPlanetas(bruto([["X b", 2010, 2, 1, null, null, null]]));
+    const [p] = lerPlanetas(bruto([["X b", 2010, 2, 1, null, null, null, true]]));
     expect(p?.massa).toBeNull();
     expect(p?.temperatura).toBeNull();
     expect(p?.distancia).toBeNull();
@@ -76,15 +79,22 @@ describe("lerPlanetas", () => {
     ["sem colunas", { linhas: [] }],
     ["colunas fora de ordem", { colunas: [...COLUNAS].reverse(), linhas: [] }],
     ["linha que não é lista", bruto(["x"])],
-    ["nome que não é texto", bruto([[1, 2010, 2, 1, null, null, null]])],
-    ["período ausente", bruto([["a", 2010, null, 1, null, null, null]])],
-    ["raio ausente", bruto([["a", 2010, 2, null, null, null, null]])],
-    ["ano ausente", bruto([["a", null, 2, 1, null, null, null]])],
-    ["período zero", bruto([["a", 2010, 0, 1, null, null, null]])],
-    ["raio negativo", bruto([["a", 2010, 2, -1, null, null, null]])],
-    ["NaN", bruto([["a", 2010, Number.NaN, 1, null, null, null]])],
+    ["nome que não é texto", bruto([[1, 2010, 2, 1, null, null, null, true]])],
+    ["período ausente", bruto([["a", 2010, null, 1, null, null, null, true]])],
+    ["raio ausente", bruto([["a", 2010, 2, null, null, null, null, true]])],
+    ["ano ausente", bruto([["a", null, 2, 1, null, null, null, true]])],
+    ["período zero", bruto([["a", 2010, 0, 1, null, null, null, true]])],
+    ["raio negativo", bruto([["a", 2010, 2, -1, null, null, null, true]])],
+    ["NaN", bruto([["a", 2010, Number.NaN, 1, null, null, null, true]])],
   ])("rejeita %s com ErroDados", (_nome, entrada) => {
     expect(() => lerPlanetas(entrada)).toThrow(ErroDados);
+  });
+
+  it("lê a origem do raio e rejeita medido que não é booleano", () => {
+    expect(lerPlanetas(bruto([["E b", 2010, 2, 1, null, null, null, false]]))[0]?.medido).toBe(false);
+    expect(() => lerPlanetas(bruto([["E b", 2010, 2, 1, null, null, null, "sim"]]))).toThrow(ErroDados);
+    expect(() => lerPlanetas(bruto([["E b", 2010, 2, 1, null, null, null, null]]))).toThrow(ErroDados);
+    expect(() => lerPlanetas(bruto([["E b", 2010, 2, 1, null, null, null]]))).toThrow(ErroDados);
   });
 
   it("aceita lista vazia", () => {
@@ -113,6 +123,20 @@ describe("filtrar", () => {
     expect(filtrar(todos, { ...SEM_FILTRO, anoMinimo: 2015 }).map((p) => p.nome)).toEqual(["Beta b", "Ção c"]);
   });
 
+  it("raios estimados só entram quando pedido", () => {
+    const comEstimado = [...todos, planeta({ nome: "Est b", medido: false })];
+    expect(filtrar(comEstimado, SEM_FILTRO).map((p) => p.nome)).not.toContain("Est b");
+    expect(filtrar(comEstimado, { ...SEM_FILTRO, incluirEstimados: true }).map((p) => p.nome)).toContain("Est b");
+  });
+
+  it("casaComABusca ignora acentos e maiúsculas, e a busca vazia casa com tudo", () => {
+    const p = planeta({ nome: "Ção c" });
+    expect(casaComABusca(p, "CAO")).toBe(true);
+    expect(casaComABusca(p, "  ")).toBe(true);
+    expect(casaComABusca(p, "")).toBe(true);
+    expect(casaComABusca(p, "zzz")).toBe(false);
+  });
+
   it("filtra só os de massa medida", () => {
     expect(filtrar(todos, { ...SEM_FILTRO, soComMassa: true }).map((p) => p.nome)).toEqual(["Alfa b", "Ção c"]);
   });
@@ -124,7 +148,13 @@ describe("filtrar", () => {
   });
 
   it("combina os filtros", () => {
-    const r = filtrar(todos, { classes: TODAS, anoMinimo: 2010, soComMassa: true, busca: "c" });
+    const r = filtrar(todos, {
+      classes: TODAS,
+      anoMinimo: 2010,
+      soComMassa: true,
+      incluirEstimados: false,
+      busca: "c",
+    });
     expect(r.map((p) => p.nome)).toEqual(["Ção c"]);
   });
 });

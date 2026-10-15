@@ -26,7 +26,6 @@
 }
 
 .topo nav .github {
-  margin-left: auto;
   color: var(--texto-2);
   text-decoration: none;
   font-size: 0.9rem;
@@ -88,4 +87,24 @@
   padding: 16px;
   border-radius: 12px;
   background: var(--superficie-2);
+}
+
+.topo nav .botao-tema {
+  margin-left: auto;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 14px;
+  background: var(--superficie-2);
+  color: var(--texto-2);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: var(--sombra);
+  transition: background-color var(--dur-rapida) var(--curva-entrada);
+}
+
+.topo nav .botao-tema[aria-pressed="true"] {
+  background: var(--texto);
+  color: var(--superficie);
 }

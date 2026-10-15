@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anosLuz, compacto, decimal, eixo, milhar, percentual } from "../../src/lib/formato";
+import { anosLuz, celsius, compacto, decimal, eixo, milhar, percentual } from "../../src/lib/formato";
 
 describe("formato", () => {
   it("separa milhares com ponto", () => {
@@ -33,6 +33,14 @@ describe("formato", () => {
     expect(eixo(0.1)).toBe("0,1");
     expect(eixo(1)).toBe("1");
     expect(eixo(10000)).toBe("10.000");
+  });
+
+  it("converte kelvin em graus Celsius, arredondado", () => {
+    expect(celsius(273.15)).toBe("0 °C");
+    expect(celsius(288)).toBe("15 °C");
+    expect(celsius(314.6)).toBe("41 °C");
+    expect(celsius(80)).toBe("-193 °C");
+    expect(celsius(1500)).toBe("1.227 °C");
   });
 
   it("converte parsecs em anos-luz", () => {

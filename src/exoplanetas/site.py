@@ -11,7 +11,7 @@ from exoplanetas import analise, dados
 SITE_DADOS = dados.RAIZ / "site" / "public" / "dados"
 
 # Ordem das colunas de planetas.json: o site lê cada linha por posição.
-COLUNAS_PLANETAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia"]
+COLUNAS_PLANETAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia", "medido"]
 CASAS = {"periodo": 4, "raio": 3, "massa": 2, "temperatura": 0, "distancia": 1}
 
 
@@ -25,10 +25,13 @@ def _valor(x, casas: int | None):
 
 
 def planetas_com_raio(df: pd.DataFrame) -> dict:
-    """Planetas de trânsito com raio e período (os que entram no gráfico período × raio)."""
-    t = analise.com_raio_medido(df)
-    t = t[t["pl_orbper"].notna()].sort_values("pl_name")
-    t = t.assign(massa=t["pl_bmasse"].where(t["pl_bmassprov"] == "Mass"))
+    """Planetas com raio e período, para o gráfico período × raio.
+
+    `medido` é verdadeiro quando o raio veio de um trânsito (os números do README). Nos demais
+    planetas o arquivo da NASA estima o raio por uma relação massa-raio, e o site os mostra à parte.
+    """
+    t = df[df["pl_orbper"].gt(0) & df["pl_rade"].gt(0)].sort_values("pl_name")
+    t = t.assign(massa=t["pl_bmasse"].where(t["pl_bmassprov"] == "Mass"), medido=t["discoverymethod"].eq("Transit"))
     linhas = [
         [
             str(r.pl_name),
@@ -38,6 +41,7 @@ def planetas_com_raio(df: pd.DataFrame) -> dict:
             _valor(r.massa, CASAS["massa"]),
             _valor(r.pl_eqt, CASAS["temperatura"]),
             _valor(r.sy_dist, CASAS["distancia"]),
+            bool(r.medido),
         ]
         for r in t.itertuples()
     ]

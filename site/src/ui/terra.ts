@@ -1,5 +1,5 @@
 import { carregarMetricas } from "../data/carregar";
-import { anosLuz, decimal, milhar } from "../lib/formato";
+import { anosLuz, celsius, decimal, milhar } from "../lib/formato";
 import type { Metricas } from "../lib/tipos";
 import { carregarSecao } from "./carga";
 import { h } from "./dom";
@@ -20,8 +20,8 @@ export function montarTerra(m: Metricas): HTMLElement {
           h("dd", {}, `${decimal(p.pl_rade, 2)}× a Terra`),
           h("dt", {}, "Luz recebida"),
           h("dd", {}, `${decimal(p.pl_insol, 2)}× a da Terra`),
-          h("dt", {}, "Temperatura"),
-          h("dd", {}, p.pl_eqt === null ? "—" : `${milhar(Math.round(p.pl_eqt))} K`),
+          h("dt", {}, "Temperatura estimada"),
+          h("dd", {}, p.pl_eqt === null ? "—" : `${milhar(Math.round(p.pl_eqt))} K (${celsius(Math.round(p.pl_eqt))})`),
           h("dt", {}, "Distância"),
           h("dd", {}, anosLuz(p.sy_dist)),
         ),

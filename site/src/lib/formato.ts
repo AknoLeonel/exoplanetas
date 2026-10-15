@@ -32,6 +32,11 @@ export function eixo(n: number): string {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(n);
 }
 
+/** Kelvin para graus Celsius, arredondado: 288 K -> "15 °C". */
+export function celsius(kelvin: number): string {
+  return `${milhar(Math.round(kelvin - 273.15))} °C`;
+}
+
 /** Parsecs para anos-luz, arredondado: 12.43 pc -> "41 anos-luz". */
 export function anosLuz(parsecs: number): string {
   return `${milhar(Math.round(parsecs * 3.26156))} anos-luz`;

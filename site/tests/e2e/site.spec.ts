@@ -5,7 +5,9 @@ import { paraMs } from "../../src/lib/tempo";
 import { DOMINIO_PERIODO, DOMINIO_RAIO, MARGEM } from "../../src/ui/grafico-periodo-raio";
 import { metricas, planetas } from "./dados";
 
-const todos = planetas();
+// Por padrão o diagrama mostra só os planetas de raio medido (os do README); os estimados entram por uma caixa.
+const comEstimados = planetas();
+const todos = comEstimados.filter((p) => p.medido);
 
 /** Falhas que o teste não deve ignorar: erros no console, exceções e requisições que falham. */
 function vigiar(page: Page) {
@@ -395,5 +397,80 @@ test.describe("shell de módulos", () => {
     await page.locator("a.cartao-modulo").first().click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Os mundos além do Sol");
     expect(pedidos.some((p) => /\/assets\/catalogo-/.test(p))).toBe(true);
+  });
+});
+
+test.describe("melhorias do catálogo", () => {
+  test("o botão de tema alterna, lembra a escolha ao recarregar e não pisca o tema errado", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.goto("/#/catalogo");
+    const fundo = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(await fundo()).toBe("rgb(252, 252, 251)");
+    const botao = page.getByRole("button", { name: "Alternar entre tema claro e escuro" });
+    await expect(botao).toHaveAttribute("aria-pressed", "false");
+    await botao.click();
+    expect(await fundo()).toBe("rgb(19, 19, 18)");
+    await expect(botao).toHaveAttribute("aria-pressed", "true");
+    await page.reload();
+    // O script do <head> aplica o tema salvo antes de qualquer JavaScript do site.
+    expect(await page.evaluate(() => document.documentElement.dataset.tema)).toBe("escuro");
+    expect(await fundo()).toBe("rgb(19, 19, 18)");
+    await page.getByRole("button", { name: "Alternar entre tema claro e escuro" }).click();
+    expect(await fundo()).toBe("rgb(252, 252, 251)");
+  });
+
+  test("o gráfico em canvas acompanha o tema escolhido", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await irParaExplorar(page);
+    const pixel = () =>
+      page.locator("#explorar canvas").evaluate((c: HTMLCanvasElement) => {
+        // O fundo do canvas é transparente; o que muda com o tema é a cor da grade e dos rótulos.
+        const d = c.getContext("2d")?.getImageData(0, 0, c.width, c.height).data ?? new Uint8ClampedArray();
+        let soma = 0;
+        let n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          if ((d[i + 3] ?? 0) > 200) {
+            soma += (d[i] ?? 0) + (d[i + 1] ?? 0) + (d[i + 2] ?? 0);
+            n++;
+          }
+        }
+        return n === 0 ? 0 : soma / n / 3;
+      });
+    const claro = await pixel();
+    await page.getByRole("button", { name: "Alternar entre tema claro e escuro" }).click();
+    await expect.poll(pixel).not.toBe(claro);
+  });
+
+  test("a caixa de raios estimados inclui os planetas de raio estimado", async ({ page }) => {
+    await irParaExplorar(page);
+    await expect(page.locator(".resumo-grafico")).toHaveText(
+      `Mostrando ${milhar(todos.length)} de ${milhar(todos.length)} planetas com raio medido.`,
+    );
+    await page.locator("#filtro-estimados").check();
+    await expect(page.locator(".resumo-grafico")).toHaveText(
+      `Mostrando ${milhar(comEstimados.length)} de ${milhar(comEstimados.length)} planetas com raio medido ou estimado.`,
+    );
+    await page.locator("#filtro-estimados").uncheck();
+    await expect(page.locator(".resumo-grafico")).toContainText(`de ${milhar(todos.length)} planetas com raio medido.`);
+  });
+
+  test("a busca destaca no gráfico sem mudar a quantidade de pontos, e a tabela filtra", async ({ page }) => {
+    await irParaExplorar(page);
+    await page.locator("#filtro-busca").fill("trappist-1");
+    const quantos = todos.filter((p) => p.nome.toLowerCase().includes("trappist-1")).length;
+    await expect(page.locator(".resumo-grafico")).toHaveText(
+      `Mostrando ${milhar(todos.length)} de ${milhar(todos.length)} planetas com raio medido. A busca destaca ${quantos} no gráfico e filtra a tabela.`,
+    );
+    await expect(page.locator("#explorar tbody tr")).toHaveCount(Math.min(quantos, 20));
+    await expect(page.locator("#explorar canvas")).toHaveAttribute(
+      "aria-label",
+      new RegExp(`${quantos} destacados pela busca`),
+    );
+  });
+
+  test("a lista de parecidos com a Terra mostra a temperatura também em °C", async ({ page }) => {
+    await page.goto("/#/catalogo");
+    await page.locator("#terra").scrollIntoViewIfNeeded();
+    await expect(page.locator("#terra li").first()).toContainText(/\d+ K \(-?[\d.]+ °C\)/);
   });
 });
