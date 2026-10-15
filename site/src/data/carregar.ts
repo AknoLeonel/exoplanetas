@@ -1,7 +1,7 @@
 import { lerDescobertas, lerMetricas } from "../lib/dados";
 import { lerPlanetas } from "../lib/planetas";
 import { type Descobertas, ErroDados, type Metricas, type Planeta } from "../lib/tipos";
-import * as telemetria from "../telemetry";
+import { tempo as registrarTempo } from "../telemetry";
 import { acompanhar } from "./acompanhar";
 
 type Buscar = (url: string) => Promise<Response>;
@@ -51,7 +51,7 @@ export async function baixarJson(url: string, opcoes: OpcoesDeCarga = {}): Promi
   } catch {
     throw new ErroDados(`JSON inválido em ${url}`, url);
   }
-  telemetria.tempo("carga-de-dados", performance.now() - inicio, { arquivo: url, bytes: texto.length });
+  registrarTempo("carga-de-dados", performance.now() - inicio, { arquivo: url, bytes: texto.length });
   return json;
 }
 

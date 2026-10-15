@@ -23,7 +23,7 @@ function vigiar(page: Page) {
 
 /** As seções carregam sob demanda: em telas altas o explorador já está perto, em celular é preciso rolar. */
 async function irParaExplorar(page: Page) {
-  await page.goto("/");
+  await page.goto("/#/catalogo");
   await page.locator("#explorar").scrollIntoViewIfNeeded();
   await page.locator("#explorar canvas").waitFor();
 }
@@ -31,7 +31,7 @@ async function irParaExplorar(page: Page) {
 test.describe("carregamento", () => {
   test("a página carrega sem erros e mostra os números do pipeline", async ({ page }) => {
     const problemas = vigiar(page);
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await expect(page).toHaveTitle(/Exoplanetas/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Os mundos além do Sol");
     const m = metricas();
@@ -51,7 +51,7 @@ test.describe("carregamento", () => {
       await segurar;
       await rota.continue();
     });
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await page.locator("#explorar").scrollIntoViewIfNeeded();
     const painel = page.locator('[data-secao="explorador"]');
     await expect(painel).toHaveAttribute("aria-busy", "true");
@@ -68,7 +68,7 @@ test.describe("carregamento", () => {
   test("lazy loading: seções distantes só baixam dados e código quando se aproximam", async ({ page }) => {
     const pedidos: string[] = [];
     page.on("request", (r) => pedidos.push(new URL(r.url()).pathname));
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await expect(page.locator(".cartoes .cartao")).toHaveCount(4);
     expect(pedidos.some((p) => p.endsWith("/dados/descobertas.json"))).toBe(false);
     expect(pedidos.some((p) => /\/assets\/descobertas-/.test(p))).toBe(false);
@@ -81,7 +81,7 @@ test.describe("carregamento", () => {
   test("sem variáveis de observabilidade, nenhum SDK de fornecedor é baixado", async ({ page }) => {
     const pedidos: string[] = [];
     page.on("request", (r) => pedidos.push(new URL(r.url()).pathname));
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await page.locator("#terra").scrollIntoViewIfNeeded();
     await expect(page.locator("#terra li").first()).toBeVisible();
     for (const fornecedor of ["sentry", "datadog", "newrelic", "otel"]) {
@@ -91,7 +91,7 @@ test.describe("carregamento", () => {
 
   test("falha ao baixar: mostra o erro e 'Tentar de novo' recupera", async ({ page }) => {
     await page.route("**/dados/planetas.json", (rota) => rota.abort());
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await page.locator("#explorar").scrollIntoViewIfNeeded();
     const painel = page.locator('[data-secao="explorador"]');
     await expect(painel.locator(".erro")).toBeVisible();
@@ -203,7 +203,7 @@ test.describe("filtros e tabela", () => {
 
 test.describe("descobertas por ano", () => {
   test("o tooltip de um ano mostra o total e os métodos", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await page.locator("#descobertas").scrollIntoViewIfNeeded();
     const svg = page.locator("#descobertas svg.grafico-barras");
     await svg.waitFor();
@@ -219,7 +219,7 @@ test.describe("descobertas por ano", () => {
   });
 
   test("existe a versão em tabela", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await page.locator("#descobertas").scrollIntoViewIfNeeded();
     await page.getByText("Ver os números em tabela").click();
     await expect(page.locator("#descobertas details tbody tr").first()).toBeVisible();
@@ -228,7 +228,7 @@ test.describe("descobertas por ano", () => {
 
 test.describe("modelo e parecidos com a Terra", () => {
   test("mostra o erro mediano do melhor modelo", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await page.locator("#modelo").scrollIntoViewIfNeeded();
     const m = metricas();
     const melhor = Math.min(...Object.values(m.modelo.resultados).map((r) => r.erro_percentual_mediano));
@@ -237,7 +237,7 @@ test.describe("modelo e parecidos com a Terra", () => {
   });
 
   test("lista os planetas mais próximos parecidos com a Terra", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await page.locator("#terra").scrollIntoViewIfNeeded();
     const m = metricas();
     await expect(page.locator("#terra li")).toHaveCount(m.parecidos_com_a_terra_mais_proximos.length);
@@ -254,7 +254,7 @@ test.describe("movimento e acessibilidade", () => {
       await new Promise((r) => setTimeout(r, 800));
       await rota.continue();
     });
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     const duracao = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--dur-entrada").trim(),
     );
@@ -272,7 +272,7 @@ test.describe("movimento e acessibilidade", () => {
       await new Promise((r) => setTimeout(r, 800));
       await rota.continue();
     });
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     const duracao = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--dur-entrada").trim(),
     );
@@ -286,7 +286,7 @@ test.describe("movimento e acessibilidade", () => {
 
   test("o conteúdo de uma seção entra com transição (opacidade) e termina visível", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "no-preference" });
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await page.locator("#explorar").scrollIntoViewIfNeeded();
     const painel = page.locator('[data-secao="explorador"] canvas');
     await expect(painel).toBeVisible();
@@ -298,17 +298,17 @@ test.describe("movimento e acessibilidade", () => {
 
   test("tema escuro muda as superfícies", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "dark" });
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(19, 19, 18)");
     await page.emulateMedia({ colorScheme: "light" });
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(252, 252, 251)");
   });
 
   test("estrutura básica: idioma, um h1, navegação e link para pular", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#/catalogo");
     await expect(page.locator("html")).toHaveAttribute("lang", "pt-BR");
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-    await expect(page.getByRole("navigation", { name: "Seções" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Módulos" })).toBeVisible();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Pular para o conteúdo" })).toBeFocused();
   });
@@ -328,5 +328,72 @@ test.describe("movimento e acessibilidade", () => {
     await page.locator("#terra").scrollIntoViewIfNeeded();
     const estouro = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(estouro).toBeLessThanOrEqual(0);
+  });
+});
+
+test.describe("shell de módulos", () => {
+  test("a página inicial apresenta o laboratório, os dois modos e os módulos", async ({ page }) => {
+    const problemas = vigiar(page);
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Laboratório de astrofísica");
+    await expect(page).toHaveTitle("Exoplanetas");
+    await expect(page.getByRole("heading", { name: "Dois jeitos de usar cada módulo" })).toBeVisible();
+    await expect(page.locator("a.cartao-modulo")).toHaveCount(1);
+    await expect(page.locator(".cartao-modulo.em-breve").first()).toContainText("Em breve");
+    expect(problemas).toEqual([]);
+  });
+
+  test("abrir o catálogo pelo cartão, usar o botão voltar e o link direto", async ({ page }) => {
+    await page.goto("/");
+    await page.locator("a.cartao-modulo").first().click();
+    await expect(page).toHaveURL(/#\/catalogo$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Os mundos além do Sol");
+    await expect(page).toHaveTitle(/Catálogo de exoplanetas/);
+    await expect(page.getByRole("navigation", { name: "Módulos" }).locator('a[aria-current="page"]')).toHaveText(
+      "Catálogo de exoplanetas",
+    );
+    await page.goBack();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Laboratório de astrofísica");
+    await page.goForward();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Os mundos além do Sol");
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Os mundos além do Sol");
+  });
+
+  test("o link do topo volta ao início e um módulo desconhecido cai no início", async ({ page }) => {
+    await page.goto("/#/catalogo");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Os mundos além do Sol");
+    await page.getByRole("link", { name: "Exoplanetas", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Laboratório de astrofísica");
+    await page.goto("/#/nao-existe");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Laboratório de astrofísica");
+  });
+
+  test("a navegação de dentro do catálogo rola até a seção sem sair da rota", async ({ page }) => {
+    await page.goto("/#/catalogo");
+    await page.getByRole("link", { name: "Descobertas", exact: true }).click();
+    await expect(page.locator("#descobertas svg.grafico-barras")).toBeVisible();
+    await expect(page).toHaveURL(/#\/catalogo$/);
+  });
+
+  test("o link para pular leva o foco ao conteúdo", async ({ page }) => {
+    await page.goto("/");
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#principal")).toBeFocused();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test("uma rota que muda dentro do catálogo preserva a URL e o carregamento sob demanda continua", async ({
+    page,
+  }) => {
+    const pedidos: string[] = [];
+    page.on("request", (r) => pedidos.push(new URL(r.url()).pathname));
+    await page.goto("/");
+    // O código do catálogo só é baixado quando o catálogo é aberto.
+    expect(pedidos.some((p) => /\/assets\/catalogo-/.test(p))).toBe(false);
+    await page.locator("a.cartao-modulo").first().click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Os mundos além do Sol");
+    expect(pedidos.some((p) => /\/assets\/catalogo-/.test(p))).toBe(true);
   });
 });

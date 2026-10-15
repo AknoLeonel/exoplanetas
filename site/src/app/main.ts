@@ -1,40 +1,45 @@
-import * as telemetria from "../telemetry";
+import { acompanhar } from "../data/acompanhar";
+import { evento, iniciarTelemetria, instalarCapturaGlobal } from "../telemetry";
 import { lerConfiguracao } from "../telemetry/config";
 import { montarBarraGlobal } from "../ui/barra-global";
-import { iniciarSecao, type ModuloDeSecao } from "../ui/carga";
-import { quandoVisivel } from "../ui/lazy";
+import { type Carregadores, montarShell } from "../ui/shell";
 
-/** Cada seção carrega o próprio código e os próprios dados só quando chega perto da tela. */
-const SECOES: Record<string, () => Promise<ModuloDeSecao>> = {
-  resumo: () => import("../ui/resumo"),
-  explorador: () => import("../ui/explorador"),
-  descobertas: () => import("../ui/descobertas"),
-  modelo: () => import("../ui/modelo"),
-  terra: () => import("../ui/terra"),
+/**
+ * Um carregador por módulo: o código de cada um só é baixado quando a rota dele é aberta.
+ * O `.then(({ montar }) => ...)` é proposital: devolver o objeto de exports inteiro faz o empacotador criar um
+ * auxiliar que acaba hospedado no chunk de um SDK de observabilidade, e o SDK seria baixado sem estar configurado.
+ * O teste e2e "nenhum SDK de fornecedor é baixado" protege isso.
+ */
+const CARREGADORES: Carregadores = {
+  inicio: () => import("../ui/inicio").then(({ montar }) => ({ montar })),
+  catalogo: () => import("../ui/catalogo").then(({ montar }) => ({ montar })),
 };
-
-function iniciarSecoes(): void {
-  for (const host of document.querySelectorAll<HTMLElement>("[data-secao]")) {
-    const nome = host.dataset.secao ?? "";
-    const carregarModulo = SECOES[nome];
-    if (!carregarModulo) continue;
-    // O resumo está no topo da página, então carrega logo; as demais esperam chegar perto da tela.
-    quandoVisivel(host, () => void iniciarSecao(host, nome, carregarModulo));
-  }
-}
 
 async function iniciar(): Promise<void> {
   const barra = document.getElementById("progresso-global");
   if (barra) montarBarraGlobal(barra);
-  iniciarSecoes();
+
+  const palco = document.getElementById("principal");
+  const navegacao = document.getElementById("nav-modulos");
+  const anuncio = document.getElementById("anuncio");
+  if (palco && navegacao && anuncio) {
+    montarShell({
+      palco,
+      navegacao,
+      anuncio,
+      carregadores: Object.fromEntries(
+        Object.entries(CARREGADORES).map(([id, carregar]) => [id, () => acompanhar(carregar())]),
+      ),
+    });
+  }
 
   const config = lerConfiguracao(import.meta.env, __AMBIENTE__, __VERSAO__);
-  telemetria.instalarCapturaGlobal(window);
-  const { ativos } = await telemetria.iniciarTelemetria(config);
+  instalarCapturaGlobal(window);
+  const { ativos } = await iniciarTelemetria(config);
   // Sem fornecedor ligado ninguém receberia as métricas, então nem baixamos o medidor.
-  if (ativos.length > 0) (await import("../telemetry/vitals")).medirWebVitals(telemetria.evento);
+  if (ativos.length > 0) (await import("../telemetry/vitals")).medirWebVitals(evento);
 }
 
 iniciar().catch(() => {
-  // A telemetria nunca pode quebrar a página; as seções já foram iniciadas.
+  // A telemetria nunca pode quebrar a página; o shell já foi iniciado.
 });

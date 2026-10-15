@@ -1,5 +1,5 @@
 import { acompanhar } from "../data/acompanhar";
-import * as telemetria from "../telemetry";
+import { erro as registrarErro } from "../telemetry";
 import { trocar } from "./animacao";
 import { h } from "./dom";
 
@@ -59,7 +59,7 @@ export async function carregarSecao<T>(pedido: PedidoDeCarga<T>): Promise<void> 
       await trocar(host, atual, conteudo);
       pedido.aposMontar?.(conteudo);
     } catch (e) {
-      telemetria.erro(e, { secao: pedido.nome });
+      registrarErro(e, { secao: pedido.nome });
       const mensagem = e instanceof Error ? e.message : "Erro desconhecido.";
       const erro = painelDeErro(mensagem, () => {
         // O erro sai e o skeleton volta antes de nova tentativa.
@@ -99,7 +99,7 @@ export async function iniciarSecao(
   try {
     modulo = await importarModulo(importar());
   } catch (e) {
-    telemetria.erro(e, { secao: nome, etapa: "modulo" });
+    registrarErro(e, { secao: nome, etapa: "modulo" });
     if (!skeleton) return;
     const erro = painelDeErro(e instanceof Error ? e.message : "Erro desconhecido.", () => {
       host.setAttribute("aria-busy", "true");
