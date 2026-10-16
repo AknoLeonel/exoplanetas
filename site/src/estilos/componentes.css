@@ -1012,3 +1012,86 @@ a.cartao-modulo:hover {
 .ligacao-modulo[hidden] {
   display: none;
 }
+
+/* ---------- Machine learning interativo ---------- */
+.grafico-ml {
+  height: 300px;
+}
+
+.cartoes-ml {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.aviso-sim[data-nivel="fora"] {
+  box-shadow: inset 3px 0 0 var(--afastando);
+}
+
+.aviso-sim[data-nivel="borda"] {
+  box-shadow: inset 3px 0 0 var(--texto-3);
+}
+
+.subtitulo {
+  font-size: 1rem;
+}
+
+.fatores {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fator {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) 2fr minmax(52px, auto);
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.fator-nome {
+  color: var(--texto-2);
+}
+
+.fator-trilho {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+
+/* A barra sai do meio: para a direita quando a variável aumenta o raio, para a esquerda quando diminui. */
+.fator-barra {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 50%;
+  border-radius: 4px;
+  background: var(--destaque);
+  transform-origin: left center;
+  transform: scaleX(var(--v, 0));
+  transition: transform var(--dur-rapida) var(--curva-entrada);
+}
+
+.fator-barra.diminui {
+  left: 0;
+  background: var(--texto-3);
+  transform-origin: right center;
+}
+
+.fator-valor {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ligacoes-modulo {
+  font-size: 0.85rem;
+  color: var(--texto-2);
+}
+
+.ligacoes-modulo[hidden] {
+  display: none;
+}

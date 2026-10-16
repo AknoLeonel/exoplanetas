@@ -7,7 +7,7 @@
   "htmlReporter": { "fileName": "reports/mutation/index.html" },
   "jsonReporter": { "fileName": "reports/mutation/mutation.json" },
   "coverageAnalysis": "perTest",
-  "vitest": { "configFile": "vite.config.ts" },
+  "vitest": { "configFile": "vitest.stryker.config.ts" },
   "thresholds": { "high": 90, "low": 80, "break": 80 },
   "tempDirName": ".stryker-tmp",
   "cleanTempDir": true

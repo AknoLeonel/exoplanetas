@@ -8,7 +8,7 @@ Todo número citado no README vem do metricas.json.
 import json
 from pathlib import Path
 
-from exoplanetas import analise, dados, graficos, modelo, site
+from exoplanetas import analise, dados, graficos, modelo, modelo_web, site
 
 SAIDA = dados.RAIZ / "reports"
 MODELO_FINAL = "Gradient boosting (todas as variáveis)"
@@ -75,7 +75,8 @@ def executar(csv: Path = dados.CSV_PADRAO, saida: Path = SAIDA, figuras: bool = 
     (saida / "metricas.json").write_text(json.dumps(resultado, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     if pasta_site is not None:
-        site.gravar(site.gerar(df, resultado), pasta_site)
+        extras = modelo_web.arquivos(base, avaliacao.previsoes[MODELO_FINAL], resultado["modelo"])
+        site.gravar(site.gerar(df, resultado, extras), pasta_site)
 
     if figuras:
         transito = analise.com_raio_medido(df)
