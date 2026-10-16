@@ -1,5 +1,6 @@
 import { lerDescobertas, lerMetricas } from "../lib/dados";
 import { lerPlanetas } from "../lib/planetas";
+import { lerTransitos, type PlanetaDeTransito } from "../lib/simulacao-transito";
 import { type Descobertas, ErroDados, type Metricas, type Planeta } from "../lib/tipos";
 import { tempo as registrarTempo } from "../telemetry";
 import { acompanhar } from "./acompanhar";
@@ -14,10 +15,11 @@ export interface OpcoesDeCarga {
 
 /** Lê o corpo da resposta aos poucos para informar o progresso. */
 async function lerCorpo(resposta: Response, aoProgredir?: (fracao: number | null) => void): Promise<string> {
-  const leitor = resposta.body?.getReader();
+  // Sem quem acompanhe o progresso, lê de uma vez: pegar o leitor antes travaria o corpo para `text()`.
+  if (!aoProgredir || !resposta.body) return resposta.text();
+  const leitor = resposta.body.getReader();
   const comprimido = resposta.headers.has("content-encoding");
   const total = Number(resposta.headers.get("content-length"));
-  if (!leitor || !aoProgredir) return resposta.text();
   const conhecido = !comprimido && Number.isFinite(total) && total > 0;
   const decodificador = new TextDecoder();
   let texto = "";
@@ -81,4 +83,8 @@ export const carregarDescobertas: (opcoes?: OpcoesDeCarga) => Promise<Descoberta
 export const carregarMetricas: (opcoes?: OpcoesDeCarga) => Promise<Metricas> = memorizar(
   "/dados/metricas.json",
   lerMetricas,
+);
+export const carregarTransitos: (opcoes?: OpcoesDeCarga) => Promise<PlanetaDeTransito[]> = memorizar(
+  "/dados/transitos.json",
+  lerTransitos,
 );
