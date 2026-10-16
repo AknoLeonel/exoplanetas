@@ -142,9 +142,10 @@ def sem_nan(obj):
     return obj
 
 
-def gerar(df: pd.DataFrame, metricas: dict) -> dict[str, dict]:
-    """Todos os arquivos de dados do site, indexados pelo nome do arquivo."""
+def gerar(df: pd.DataFrame, metricas: dict, extras: dict[str, dict] | None = None) -> dict[str, dict]:
+    """Todos os arquivos de dados do site, indexados pelo nome do arquivo. `extras` traz os do modelo de ML."""
     return {
+        **(extras or {}),
         "planetas.json": planetas_com_raio(df),
         "transitos.json": transitos(df),
         "velocidades.json": velocidades(df),
