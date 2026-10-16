@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { acharModulo } from "../../src/lib/modulos";
+import { acharModulo, modulosDisponiveis } from "../../src/lib/modulos";
 import { criarAlternador } from "../../src/ui/alternador-de-modo";
 import { h } from "../../src/ui/dom";
 import {
@@ -78,7 +78,8 @@ describe("shell", () => {
     const ativo = navegacao.querySelector('a[aria-current="page"]');
     expect(ativo?.textContent).toBe("Catálogo de exoplanetas");
     expect(ativo?.getAttribute("href")).toBe("#/catalogo");
-    expect(navegacao.querySelectorAll("a")).toHaveLength(1); // só os módulos disponíveis, sem o início
+    // Só os módulos disponíveis, sem o início.
+    expect(navegacao.querySelectorAll("a")).toHaveLength(modulosDisponiveis().length - 1);
   });
 
   it("mudar o hash troca de módulo, com foco, rolagem e anúncio", async () => {
@@ -106,7 +107,7 @@ describe("shell", () => {
   });
 
   it("módulo desconhecido ou ainda 'em breve' cai no início", async () => {
-    window.location.hash = "#/transito";
+    window.location.hash = "#/velocidade-radial";
     const inicio = falso();
     iniciar({ inicio: async () => inicio, catalogo: async () => falso() });
     await esperarAte(() => expect(inicio.montar).toHaveBeenCalledOnce());

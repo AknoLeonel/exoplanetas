@@ -14,6 +14,10 @@ SITE_DADOS = dados.RAIZ / "site" / "public" / "dados"
 COLUNAS_PLANETAS = ["nome", "ano", "periodo", "raio", "massa", "temperatura", "distancia", "medido"]
 CASAS = {"periodo": 4, "raio": 3, "massa": 2, "temperatura": 0, "distancia": 1}
 
+# Ordem das colunas de transitos.json, para o simulador de trânsito.
+COLUNAS_TRANSITOS = ["nome", "periodo", "raio", "raio_estrela", "semi_eixo", "massa_estrela"]
+CASAS_TRANSITOS = {"periodo": 6, "raio": 3, "raio_estrela": 4, "semi_eixo": 5, "massa_estrela": 3}
+
 
 def _valor(x, casas: int | None):
     """Número JSON: NaN vira None e floats são arredondados."""
@@ -46,6 +50,31 @@ def planetas_com_raio(df: pd.DataFrame) -> dict:
         for r in t.itertuples()
     ]
     return {"colunas": COLUNAS_PLANETAS, "linhas": linhas}
+
+
+def transitos(df: pd.DataFrame) -> dict:
+    """Planetas de trânsito com o que o simulador precisa para refazer a curva de luz.
+
+    Entra quem tem período, raio do planeta e raio da estrela, e ao menos o semi-eixo ou a massa
+    da estrela (sem semi-eixo, o site o calcula pela terceira lei de Kepler). A inclinação não está
+    no arquivo coletado, então o simulador começa num trânsito central.
+    """
+    t = analise.com_raio_medido(df)
+    t = t[t["pl_orbper"].gt(0) & t["pl_rade"].gt(0) & t["st_rad"].gt(0) & (t["pl_orbsmax"].gt(0) | t["st_mass"].gt(0))]
+    t = t.sort_values("pl_name")
+    c = CASAS_TRANSITOS
+    linhas = [
+        [
+            str(r.pl_name),
+            _valor(r.pl_orbper, c["periodo"]),
+            _valor(r.pl_rade, c["raio"]),
+            _valor(r.st_rad, c["raio_estrela"]),
+            _valor(r.pl_orbsmax if r.pl_orbsmax > 0 else None, c["semi_eixo"]),
+            _valor(r.st_mass if r.st_mass > 0 else None, c["massa_estrela"]),
+        ]
+        for r in t.itertuples()
+    ]
+    return {"colunas": COLUNAS_TRANSITOS, "linhas": linhas}
 
 
 def descobertas(df: pd.DataFrame) -> dict:
@@ -87,6 +116,7 @@ def gerar(df: pd.DataFrame, metricas: dict) -> dict[str, dict]:
     """Todos os arquivos de dados do site, indexados pelo nome do arquivo."""
     return {
         "planetas.json": planetas_com_raio(df),
+        "transitos.json": transitos(df),
         "descobertas.json": descobertas(df),
         "metricas.json": sem_nan(metricas),
         "parametros.json": parametros(),

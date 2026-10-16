@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anosLuz, celsius, compacto, decimal, eixo, milhar, percentual } from "../../src/lib/formato";
+import { anosLuz, celsius, compacto, decimal, eixo, fracaoDoBrilho, milhar, percentual } from "../../src/lib/formato";
 
 describe("formato", () => {
   it("separa milhares com ponto", () => {
@@ -48,5 +48,15 @@ describe("formato", () => {
   it("converte parsecs em anos-luz", () => {
     expect(anosLuz(12.4299)).toBe("41 anos-luz");
     expect(anosLuz(1000)).toBe("3.262 anos-luz");
+  });
+});
+
+describe("fracaoDoBrilho", () => {
+  it("usa porcentagem a partir de 0,1% e ppm abaixo", () => {
+    expect(fracaoDoBrilho(0.0144)).toBe("1,44%");
+    expect(fracaoDoBrilho(0.25)).toBe("25,0%");
+    expect(fracaoDoBrilho(0.001)).toBe("0,10%");
+    expect(fracaoDoBrilho(0.000084)).toBe("84 ppm");
+    expect(fracaoDoBrilho(0)).toBe("0 ppm");
   });
 });

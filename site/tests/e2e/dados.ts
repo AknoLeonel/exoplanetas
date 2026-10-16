@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { lerPlanetas } from "../../src/lib/planetas";
+import { lerTransitos } from "../../src/lib/simulacao-transito";
 import type { Metricas } from "../../src/lib/tipos";
 
 const PASTA = new URL("../../public/dados/", import.meta.url);
@@ -11,4 +12,8 @@ export function planetas() {
 
 export function metricas(): Metricas {
   return JSON.parse(readFileSync(new URL("metricas.json", PASTA), "utf-8"));
+}
+
+export function transitos() {
+  return lerTransitos(JSON.parse(readFileSync(new URL("transitos.json", PASTA), "utf-8")));
 }

@@ -43,6 +43,15 @@ describe("baixarJson", () => {
     expect(await baixarJson("/x.json", { buscar: async () => resposta({ a: 1 }) })).toEqual({ a: 1 });
   });
 
+  it("sem quem acompanhe o progresso, lê o corpo de uma vez, sem travar o fluxo", async () => {
+    const { baixarJson } = await carregador();
+    // No navegador, pegar o leitor trava o corpo e `text()` falha ("body stream is locked").
+    const getReader = vi.fn();
+    const r = { ok: true, status: 200, headers: new Headers(), body: { getReader }, text: async () => '{"a":2}' };
+    expect(await baixarJson("/x.json", { buscar: async () => r as unknown as Response })).toEqual({ a: 2 });
+    expect(getReader).not.toHaveBeenCalled();
+  });
+
   it("erro HTTP vira ErroDados com o status", async () => {
     const { baixarJson, ErroDados } = await carregador();
     const p = baixarJson("/x.json", { buscar: async () => resposta("não achei", { status: 404 }) });
@@ -157,7 +166,7 @@ describe("cargas memorizadas", () => {
     await expect(carregarPlanetas({ buscar })).resolves.toHaveLength(1);
   });
 
-  it("descobertas e métricas usam os próprios arquivos", async () => {
+  it("descobertas, métricas e trânsitos usam os próprios arquivos", async () => {
     const urls: string[] = [];
     const buscar = async (u: string) => {
       urls.push(u);
@@ -173,10 +182,11 @@ describe("cargas memorizadas", () => {
             },
       );
     };
-    const { carregarDescobertas, carregarMetricas } = await carregador();
+    const { carregarDescobertas, carregarMetricas, carregarTransitos } = await carregador();
     await carregarDescobertas({ buscar });
     await carregarMetricas({ buscar });
-    expect(urls).toEqual(["/dados/descobertas.json", "/dados/metricas.json"]);
+    await expect(carregarTransitos({ buscar })).rejects.toThrow("transitos.json");
+    expect(urls).toEqual(["/dados/descobertas.json", "/dados/metricas.json", "/dados/transitos.json"]);
   });
 });
 

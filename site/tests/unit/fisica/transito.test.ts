@@ -6,7 +6,9 @@ import {
   fluxoRelativo,
   type GeometriaDoTransito,
   haTransito,
+  intensidadeNoDisco,
   parametroDeImpacto,
+  posicaoNoCeu,
   profundidadeNoCentro,
   profundidadeSimples,
   razaoDeRaios,
@@ -190,5 +192,30 @@ describe("curva de luz", () => {
     expect(() => curvaDeLuz(hd209458b, 0, 10)).toThrow("janelaDias");
     expect(() => curvaDeLuz(hd209458b, 1, 1)).toThrow(RangeError);
     expect(() => curvaDeLuz(hd209458b, 1, 2.5)).toThrow(RangeError);
+  });
+});
+
+describe("posição no céu e brilho do disco", () => {
+  it("no meio do trânsito o planeta está em (0, b), e a distância ao centro é a separação projetada", () => {
+    const meio = posicaoNoCeu(hd209458b, 0);
+    expect(meio.x).toBeCloseTo(0, 12);
+    expect(meio.y).toBeCloseTo(parametroDeImpacto(hd209458b), 12);
+    expect(meio.naFrente).toBe(true);
+    for (const t of [-0.05, -0.01, 0.02, 0.06]) {
+      const p = posicaoNoCeu(hd209458b, t);
+      expect(Math.hypot(p.x, p.y)).toBeCloseTo(separacaoProjetada(hd209458b, t), 12);
+      expect(Math.sign(p.x)).toBe(Math.sign(t));
+    }
+  });
+
+  it("meia órbita depois, o planeta está atrás da estrela", () => {
+    expect(posicaoNoCeu(hd209458b, hd209458b.periodoDias / 2).naFrente).toBe(false);
+  });
+
+  it("intensidade: 1 no centro e 1 − u₁ − u₂ na borda", () => {
+    const ld = { u1: 0.4, u2: 0.25 };
+    expect(intensidadeNoDisco(0, ld)).toBe(1);
+    expect(intensidadeNoDisco(1, ld)).toBeCloseTo(0.35, 12);
+    expect(intensidadeNoDisco(0.5, SEM_ESCURECIMENTO)).toBe(1);
   });
 });

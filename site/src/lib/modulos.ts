@@ -39,7 +39,7 @@ export const MODULOS: readonly DefinicaoDeModulo[] = [
     id: "transito",
     titulo: "Simulador de trânsito",
     resumo: "Mude o planeta e a estrela e veja a curva de luz se desenhar ao vivo.",
-    status: "em-breve",
+    status: "disponivel",
     modos: ["aprender", "explorar"],
   },
   {

@@ -30,6 +30,12 @@ Instruções obrigatórias para qualquer agente de IA (de qualquer modelo ou fer
 - Se um PR depende de outro ainda não mergeado, abra-o com base na branch dele e diga isso na descrição. Quando o PR de baixo for mergeado, aponte este para a `main`.
 - Segredos e chaves de observabilidade ficam nas variáveis de ambiente da Vercel, nunca no repositório. Toda variável nova entra em `site/.env.example`.
 
+## Checklist de produção
+
+- Os dez itens estão no README (seção "Checklist de produção") e em `docs/`. Mudou algo que um deles descreve (cache, cabeçalhos, variáveis, camadas)? Atualize o documento no mesmo PR.
+- `scripts/check-secrets.sh` roda no CI. Nunca versione `.env`, e nunca coloque chave secreta em `site/`: tudo lá vai para o navegador.
+- Hoje não há backend nem banco, por isso RLS, login e rate limit não se aplicam. Se o projeto ganhar algum dos dois, esses itens de [docs/SECURITY.md](docs/SECURITY.md) e [docs/RATE_LIMIT.md](docs/RATE_LIMIT.md) viram obrigatórios no mesmo PR que os introduz.
+
 ## Site (`site/`)
 
 - Camadas (verificadas pelo `arch-contract`): `lib` (lógica pura, sem DOM nem rede) ← `data` ← `ui` ← `app`. Só `src/telemetry/provedores/` conhece SDKs de fornecedor; o resto usa a fachada `telemetria` (`erro`, `evento`, `tempo`).

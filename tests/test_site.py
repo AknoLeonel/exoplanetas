@@ -83,7 +83,7 @@ def test_gravar_cria_arquivos_json_validos(tmp_path):
     arquivos = site.gerar(sintetico(n=20), {"dados": {"planetas": 20}})
     site.gravar(arquivos, tmp_path / "novo" / "dados")
     salvos = {p.name for p in (tmp_path / "novo" / "dados").iterdir()}
-    assert salvos == {"planetas.json", "descobertas.json", "metricas.json", "parametros.json"}
+    assert salvos == {"planetas.json", "transitos.json", "descobertas.json", "metricas.json", "parametros.json"}
     metricas = json.loads((tmp_path / "novo" / "dados" / "metricas.json").read_text(encoding="utf-8"))
     assert metricas == {"dados": {"planetas": 20}}
 
@@ -117,3 +117,22 @@ def test_parametros_vem_das_constantes_da_analise():
     assert p["classes"][-1]["max"] is None  # infinito não existe em JSON
     assert p["classes"][0] == {"nome": "Terra", "min": 0.0, "max": 1.25}
     assert p["deserto"] == {"periodo_max": analise.DESERTO_PERIODO_DIAS, "raio_min": 2.0, "raio_max": 6.0}
+
+
+def test_transitos_so_com_o_que_o_simulador_precisa():
+    df = _com_um_planeta_radial()
+    df.loc[2, "st_rad"] = float("nan")  # sem raio da estrela: fica de fora
+    df.loc[3, "pl_orbsmax"] = float("nan")  # sem semi-eixo, mas com massa da estrela: entra
+    df.loc[4, ["pl_orbsmax", "st_mass"]] = float("nan")  # sem os dois: fica de fora
+    out = site.transitos(df)
+    por_nome = {linha[0]: linha for linha in out["linhas"]}
+    assert out["colunas"] == site.COLUNAS_TRANSITOS
+    assert "Radial b" not in por_nome  # o raio não foi medido
+    assert "Sem periodo b" not in por_nome
+    assert "P2" not in por_nome and "P4" not in por_nome
+    i_semi = site.COLUNAS_TRANSITOS.index("semi_eixo")
+    assert por_nome["P3"][i_semi] is None
+    assert por_nome["P5"][i_semi] == 0.1
+    assert len(por_nome) == 28
+    assert list(por_nome) == sorted(por_nome)
+    assert all(len(linha) == len(site.COLUNAS_TRANSITOS) for linha in out["linhas"])

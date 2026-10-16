@@ -61,18 +61,39 @@ export function haTransito(g: GeometriaDoTransito): boolean {
 
 /** Distância projetada entre os centros, em raios estelares, `tempoDias` depois do meio do trânsito (órbita circular). */
 export function separacaoProjetada(g: GeometriaDoTransito, tempoDias: number): number {
+  const { x, y, naFrente } = posicaoNoCeu(g, tempoDias);
+  // Do outro lado da estrela (atrás) não há trânsito: devolve um valor grande.
+  if (!naFrente) return Number.POSITIVE_INFINITY;
+  return Math.hypot(x, y);
+}
+
+export interface PosicaoNoCeu {
+  /** Ao longo da órbita, em raios estelares (negativo antes do meio do trânsito). */
+  x: number;
+  /** Perpendicular, em raios estelares: o parâmetro de impacto no meio do trânsito. */
+  y: number;
+  /** O planeta está do lado de cá da estrela (pode cobri-la)? */
+  naFrente: boolean;
+}
+
+/** Posição do planeta projetada no céu, `tempoDias` depois do meio do trânsito (órbita circular). */
+export function posicaoNoCeu(
+  g: Pick<GeometriaDoTransito, "semiEixoEmRaiosEstelares" | "inclinacaoGraus" | "periodoDias">,
+  tempoDias: number,
+): PosicaoNoCeu {
   const fase = (2 * Math.PI * tempoDias) / g.periodoDias;
   const cosI = Math.cos((g.inclinacaoGraus * Math.PI) / 180);
-  const frente = Math.cos(fase);
-  // Do outro lado da estrela (atrás) não há trânsito: devolve um valor grande.
-  if (frente < 0) return Number.POSITIVE_INFINITY;
-  return g.semiEixoEmRaiosEstelares * Math.sqrt(Math.sin(fase) ** 2 + cosI * cosI * frente ** 2);
+  return {
+    x: g.semiEixoEmRaiosEstelares * Math.sin(fase),
+    y: g.semiEixoEmRaiosEstelares * cosI * Math.cos(fase),
+    naFrente: Math.cos(fase) >= 0,
+  };
 }
 
 const ANEIS = 600;
 
-/** Intensidade relativa no disco estelar, a uma distância r do centro (em raios estelares). */
-function intensidade(r: number, { u1, u2 }: EscurecimentoDeBorda): number {
+/** Intensidade relativa no disco estelar (1 no centro), a uma distância r do centro, em raios estelares. */
+export function intensidadeNoDisco(r: number, { u1, u2 }: EscurecimentoDeBorda): number {
   const mu = Math.sqrt(Math.max(0, 1 - r * r));
   return 1 - u1 * (1 - mu) - u2 * (1 - mu) ** 2;
 }
@@ -98,7 +119,7 @@ export function fluxoRelativo(z: number, k: number, escurecimento: Escurecimento
   let bloqueado = 0;
   for (let i = 0; i < ANEIS; i++) {
     const r = (i + 0.5) / ANEIS;
-    const peso = intensidade(r, escurecimento) * r; // 2π cancela na razão
+    const peso = intensidadeNoDisco(r, escurecimento) * r; // 2π cancela na razão
     total += peso;
     bloqueado += peso * fracaoCoberta(r, Math.abs(z), k);
   }

@@ -25,6 +25,9 @@
   --classe-super-jupiter: #10306b;
   --deserto: rgb(235 104 52 / 0.12);
   --deserto-borda: #eb6834;
+  /* Simulador de trânsito: a estrela (o escurecimento de borda é desenhado por cima) e a silhueta do planeta. */
+  --estrela: #f4b63f;
+  --planeta: #141413;
 
   /* Método de descoberta: categórica, na ordem fixa da paleta validada. */
   --metodo-transit: #2a78d6;
@@ -71,6 +74,8 @@
     --classe-super-jupiter: #b9d6f7;
     --deserto: rgb(217 89 38 / 0.16);
     --deserto-borda: #d95926;
+    --estrela: #e9a52c;
+    --planeta: #050505;
     --metodo-transit: #3987e5;
     --metodo-radial-velocity: #d95926;
     --metodo-microlensing: #199e70;
@@ -102,6 +107,8 @@
   --classe-super-jupiter: #b9d6f7;
   --deserto: rgb(217 89 38 / 0.16);
   --deserto-borda: #d95926;
+  --estrela: #e9a52c;
+  --planeta: #050505;
   --metodo-transit: #3987e5;
   --metodo-radial-velocity: #d95926;
   --metodo-microlensing: #199e70;
