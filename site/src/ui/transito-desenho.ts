@@ -84,6 +84,7 @@ function criarTela(classe: string, rotulo: string, pintar: Pintor): Tela {
   };
   esquema?.addEventListener("change", aoTrocarDeTema);
   window.addEventListener("tema-alterado", aoTrocarDeTema);
+  medir();
 
   return {
     elemento,
