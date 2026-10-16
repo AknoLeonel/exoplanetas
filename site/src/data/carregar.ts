@@ -1,4 +1,5 @@
 import { lerDescobertas, lerMetricas } from "../lib/dados";
+import { lerModelo, lerPlanetasDoTreino, type ModeloRaio, type PlanetaDoTreino } from "../lib/modelo-raio";
 import { lerPlanetas } from "../lib/planetas";
 import { lerTransitos, type PlanetaDeTransito } from "../lib/simulacao-transito";
 import { lerVelocidades, type PlanetaComMassa } from "../lib/simulacao-velocidade-radial";
@@ -92,4 +93,12 @@ export const carregarTransitos: (opcoes?: OpcoesDeCarga) => Promise<PlanetaDeTra
 export const carregarVelocidades: (opcoes?: OpcoesDeCarga) => Promise<PlanetaComMassa[]> = memorizar(
   "/dados/velocidades.json",
   lerVelocidades,
+);
+export const carregarModeloRaio: (opcoes?: OpcoesDeCarga) => Promise<ModeloRaio> = memorizar(
+  "/dados/modelo-raio.json",
+  lerModelo,
+);
+export const carregarPlanetasDoTreino: (opcoes?: OpcoesDeCarga) => Promise<PlanetaDoTreino[]> = memorizar(
+  "/dados/modelo-planetas.json",
+  lerPlanetasDoTreino,
 );

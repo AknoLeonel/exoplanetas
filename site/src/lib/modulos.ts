@@ -53,7 +53,7 @@ export const MODULOS: readonly DefinicaoDeModulo[] = [
     id: "ml",
     titulo: "Machine learning interativo",
     resumo: "O modelo de raio rodando no seu navegador, com incerteza e explicação de cada previsão.",
-    status: "em-breve",
+    status: "disponivel",
     modos: ["aprender", "explorar"],
   },
   {
