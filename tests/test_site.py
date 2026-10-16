@@ -83,7 +83,7 @@ def test_gravar_cria_arquivos_json_validos(tmp_path):
     arquivos = site.gerar(sintetico(n=20), {"dados": {"planetas": 20}})
     site.gravar(arquivos, tmp_path / "novo" / "dados")
     salvos = {p.name for p in (tmp_path / "novo" / "dados").iterdir()}
-    assert salvos == {"planetas.json", "transitos.json", "descobertas.json", "metricas.json", "parametros.json"}
+    assert salvos == {"planetas.json", "transitos.json", "velocidades.json", "descobertas.json", "metricas.json", "parametros.json"}
     metricas = json.loads((tmp_path / "novo" / "dados" / "metricas.json").read_text(encoding="utf-8"))
     assert metricas == {"dados": {"planetas": 20}}
 
@@ -136,3 +136,23 @@ def test_transitos_so_com_o_que_o_simulador_precisa():
     assert len(por_nome) == 28
     assert list(por_nome) == sorted(por_nome)
     assert all(len(linha) == len(site.COLUNAS_TRANSITOS) for linha in out["linhas"])
+
+
+def test_velocidades_com_massa_verdadeira_ou_minima_e_raio_so_quando_medido():
+    df = _com_um_planeta_radial()  # "Radial b" é cópia de P0, mas descoberto por velocidade radial
+    df.loc[2, "pl_bmassprov"] = "Msini"
+    df.loc[3, "pl_bmassprov"] = "M-R relationship"  # massa estimada: fica de fora
+    df.loc[4, "st_mass"] = float("nan")  # sem massa da estrela: fica de fora
+    df.loc[5, "pl_orbeccen"] = float("nan")
+    out = site.velocidades(df)
+    por_nome = {linha[0]: linha for linha in out["linhas"]}
+    col = {nome: i for i, nome in enumerate(site.COLUNAS_VELOCIDADES)}
+    assert out["colunas"] == site.COLUNAS_VELOCIDADES
+    assert "P3" not in por_nome and "P4" not in por_nome and "Sem periodo b" not in por_nome
+    assert por_nome["P2"][col["tipo_massa"]] == "minima"
+    assert por_nome["P0"][col["tipo_massa"]] == "verdadeira"
+    assert por_nome["P5"][col["excentricidade"]] is None
+    assert por_nome["P0"][col["raio"]] is not None  # trânsito: raio medido
+    assert por_nome["Radial b"][col["raio"]] is None  # o raio de quem não transita é estimado
+    assert len(por_nome) == 29
+    assert list(por_nome) == sorted(por_nome)
