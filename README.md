@@ -115,6 +115,23 @@ npm run mutacao                    # Stryker, na lógica pura
 
 **Deploy:** a Vercel publica a `main` e cria uma prévia para cada branch e PR (`vercel.json` na raiz). **Observabilidade:** Sentry, Datadog RUM, New Relic e OpenTelemetry ligam sozinhos quando as variáveis `VITE_*` de [`site/.env.example`](site/.env.example) existem; sem elas, nenhum SDK é baixado.
 
+## Checklist de produção
+
+Cada item tem um documento que diz o que já está feito, onde, e o que não se aplica a um site estático sem backend nem banco.
+
+- [x] 1. Camadas separadas: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [x] 2. Dados e RLS: [docs/SECURITY.md](docs/SECURITY.md) (sem banco hoje; modelo em [docs/RLS_TEMPLATE.sql](docs/RLS_TEMPLATE.sql))
+- [x] 3. Autenticação e permissões: [docs/SECURITY.md](docs/SECURITY.md) (sem login hoje)
+- [x] 4. Git: Issue, branch e PR para a `main`; rollback pelo histórico de deploys da Vercel ([AGENTS.md](AGENTS.md))
+- [ ] 5. Integrações: a coleta da NASA tem timeout e validação; falta retry com backoff
+- [x] 6. Deploy: Vercel com variáveis de ambiente e prévia por PR (`vercel.json`)
+- [x] 7. Segurança: [`scripts/check-secrets.sh`](scripts/check-secrets.sh) no CI; rate limit em [docs/RATE_LIMIT.md](docs/RATE_LIMIT.md)
+- [x] 8. Cache com TTL e invalidação: [docs/CACHE.md](docs/CACHE.md)
+- [x] 9. Escala: [docs/SCALING.md](docs/SCALING.md)
+- [ ] 10. Observabilidade: [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) (falta ligar as variáveis na Vercel)
+
+Para começar outro projeto com o mesmo checklist: `./scripts/novo-projeto.sh <nome> [next|node|python]` (cria a pasta no diretório atual).
+
 ## Estrutura
 
 ```
@@ -126,6 +143,8 @@ src/exoplanetas/
   graficos.py         gráficos em tema claro e escuro
   pipeline.py         roda tudo e grava reports/
 tests/                pytest
+docs/                 checklist de produção (arquitetura, segurança, cache, escala, observabilidade)
+scripts/              coleta da NASA, varredura de segredos e gerador de projeto novo
 reports/              metricas.json e figuras
 site/                 site estático (src/lib, data, ui, telemetry), testes e config de qualidade
 vercel.json           build e cabeçalhos do deploy
