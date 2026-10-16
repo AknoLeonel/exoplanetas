@@ -265,7 +265,7 @@ describe("contratos que a interface usa", () => {
 
   it("cada campo inválido do velocidades.json é recusado, com a origem do erro", () => {
     const colunas = ["nome", "periodo", "massa", "tipo_massa", "massa_estrela", "excentricidade", "raio"];
-    const ok = ["A b", 10, 5, "minima", 1, 0.1, null];
+    const ok: unknown[] = ["A b", 10, 5, "minima", 1, 0.1, null];
     const tentar = (linha: unknown[]) => () => lerVelocidades({ colunas, linhas: [linha] });
     expect(lerVelocidades({ colunas, linhas: [ok] })).toHaveLength(1);
     for (const [i, ruim] of [

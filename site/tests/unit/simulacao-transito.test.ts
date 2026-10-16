@@ -270,7 +270,7 @@ describe("contratos que a interface usa", () => {
 
   it("cada campo inválido do transitos.json é recusado, com a origem do erro", () => {
     const colunas = ["nome", "periodo", "raio", "raio_estrela", "semi_eixo", "massa_estrela"];
-    const ok = ["A b", 10, 2, 1, 0.1, 1];
+    const ok: unknown[] = ["A b", 10, 2, 1, 0.1, 1];
     expect(lerTransitos({ colunas, linhas: [ok] })).toHaveLength(1);
     for (const [i, ruim] of [
       [0, 3],
