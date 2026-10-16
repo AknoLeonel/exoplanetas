@@ -46,7 +46,7 @@ export const MODULOS: readonly DefinicaoDeModulo[] = [
     id: "velocidade-radial",
     titulo: "Simulador de velocidade radial",
     resumo: "O balanço da estrela causado por um planeta, e por que só dá a massa mínima.",
-    status: "em-breve",
+    status: "disponivel",
     modos: ["aprender", "explorar"],
   },
   {

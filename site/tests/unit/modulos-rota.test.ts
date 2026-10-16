@@ -21,8 +21,8 @@ describe("registro de módulos", () => {
 
   it("só os disponíveis têm página; os demais são roteiro", () => {
     const disponiveis = modulosDisponiveis().map((m) => m.id);
-    expect(disponiveis).toEqual(expect.arrayContaining(["catalogo", "transito"]));
-    expect(disponiveis).not.toContain("velocidade-radial");
+    expect(disponiveis).toEqual(expect.arrayContaining(["catalogo", "transito", "velocidade-radial"]));
+    expect(disponiveis).not.toContain("ml");
     expect(MODULOS.filter((m) => m.status === "em-breve").length).toBeGreaterThan(0);
   });
 

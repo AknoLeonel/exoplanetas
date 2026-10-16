@@ -15,6 +15,7 @@ const CARREGADORES: Carregadores = {
   inicio: () => import("../ui/inicio").then(({ montar }) => ({ montar })),
   catalogo: () => import("../ui/catalogo").then(({ montar }) => ({ montar })),
   transito: () => import("../ui/transito").then(({ montar }) => ({ montar })),
+  "velocidade-radial": () => import("../ui/velocidade-radial").then(({ montar }) => ({ montar })),
 };
 
 async function iniciar(): Promise<void> {

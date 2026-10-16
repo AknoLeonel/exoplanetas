@@ -19,12 +19,25 @@ import {
   simulacaoDoPlaneta,
   simularCurva,
 } from "../lib/simulacao-transito";
-import { erro as registrarErro, evento as registrarEvento } from "../telemetry";
-import { entrar, trocar } from "./animacao";
+import { evento as registrarEvento } from "../telemetry";
+import { trocar } from "./animacao";
 import { h } from "./dom";
 import type { ContextoDoModulo } from "./shell";
+import {
+  adiar,
+  baixarArquivo,
+  criarAnimacao,
+  criarBuscaDePlaneta,
+  criarCartao,
+  criarControles,
+  criarRoteiro,
+  lerPasso,
+  nomeDoArquivo,
+  preencher,
+  semNulos,
+} from "./simulador";
 import { criarCurvaDeLuz, criarVistaDaEstrela } from "./transito-desenho";
-import { lerPasso, ROTEIRO } from "./transito-roteiro";
+import { ROTEIRO } from "./transito-roteiro";
 
 /** Segundos que a animação leva para atravessar a janela da curva. */
 const SEGUNDOS_POR_PASSAGEM = 6;
@@ -33,12 +46,12 @@ const ESPERA_DO_ANUNCIO_MS = 600;
 /** Pontos de cada curva: suficiente para o fundo arredondado e leve para redesenhar a cada controle. */
 const PONTOS = 300;
 
-export interface OpcoesDoSimulador {
-  carregarCatalogo?: () => Promise<PlanetaDeTransito[]>;
+export interface OpcoesDoSimulador<P> {
+  carregarCatalogo?: () => Promise<P[]>;
   baixar?: (nome: string, conteudo: string) => void;
 }
 
-type ContextoDoSimulador = Pick<ContextoDoModulo, "modo" | "parametros" | "definirParametros">;
+export type ContextoDoSimulador = Pick<ContextoDoModulo, "modo" | "parametros" | "definirParametros">;
 
 /** Valor de um controle como texto, com a unidade. */
 export function formatarValor(chave: ChaveDaSimulacao, v: number): string {
@@ -55,37 +68,15 @@ export function formatarValor(chave: ChaveDaSimulacao, v: number): string {
   }
 }
 
-function baixarArquivo(nome: string, conteudo: string): void {
-  const url = URL.createObjectURL(new Blob([conteudo], { type: "text/csv;charset=utf-8" }));
-  const link = h("a", { href: url, download: nome });
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-function nomeDoArquivo(referencia: string | null): string {
-  const base = (referencia ?? "simulacao")
-    .normalize("NFD")
-    .replace(/[^\w-]+/g, "-")
-    .replace(/-+/g, "-");
-  return `curva-de-luz-${base.replace(/^-|-$/g, "").toLowerCase()}.csv`;
-}
-
-interface Controle {
-  rotulo: HTMLElement;
-  entrada: HTMLInputElement;
-  saida: HTMLOutputElement;
-}
-
 /** O simulador inteiro: vistas, controles, leituras e, no modo Aprender, o roteiro guiado. */
-export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimulador = {}): HTMLElement {
+export function montarSimulador(
+  ctx: ContextoDoSimulador,
+  opcoes: OpcoesDoSimulador<PlanetaDeTransito> = {},
+): HTMLElement {
   const aprender = ctx.modo === "aprender";
-  const carregarCatalogo = opcoes.carregarCatalogo ?? (() => carregarTransitos());
   const baixar = opcoes.baixar ?? baixarArquivo;
 
   let s: Simulacao = lerSimulacao(ctx.parametros);
-  let passo = lerPasso(ctx.parametros.passo);
   /** Planeta do catálogo para comparar: os valores dele e o nome. */
   let referencia: { nome: string; simulacao: Simulacao } | null = null;
   let curva: Curva = simularCurva(s, PONTOS);
@@ -93,11 +84,6 @@ export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimula
   let leitura: Leitura = ler(s);
   /** Instante mostrado, como fração da meia janela: −1 (antes) a 1 (depois). */
   let fracaoDoTempo = 0;
-  let animando = false;
-  let quadroDaAnimacao = 0;
-  let ultimoQuadro = 0;
-  let esperaDaUrl: ReturnType<typeof setTimeout> | undefined;
-  let esperaDoAnuncio: ReturnType<typeof setTimeout> | undefined;
 
   const tempoDias = () => fracaoDoTempo * curva.meiaJanelaDias;
   function fluxoAgora(): number {
@@ -119,11 +105,10 @@ export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimula
     ruido: s.ruidoPpm * 1e-6,
   }));
 
-  const anuncio = h("p", { class: "so-leitor", "aria-live": "polite", "data-anuncio-transito": "" });
-  const aviso = h("p", { class: "aviso-transito", role: "status" });
+  const anuncio = h("p", { class: "so-leitor", "aria-live": "polite", "data-anuncio": "" });
+  const aviso = h("p", { class: "aviso-sim", role: "status" });
 
   // ---------- Tempo e animação ----------
-  const botaoAnimar = h("button", { class: "botao", type: "button", "aria-pressed": "false" }, "Animar");
   const tempo = h("input", {
     type: "range",
     id: "transito-tempo",
@@ -145,82 +130,30 @@ export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimula
     grafico.agendar();
   }
 
-  function pararAnimacao(): void {
-    animando = false;
-    cancelAnimationFrame(quadroDaAnimacao);
-    botaoAnimar.textContent = "Animar";
-    botaoAnimar.setAttribute("aria-pressed", "false");
-  }
-
-  function quadro(agora: number): void {
-    if (!raiz.isConnected) {
-      pararAnimacao();
-      return;
-    }
-    const passou = ultimoQuadro ? (agora - ultimoQuadro) / 1000 : 0;
-    ultimoQuadro = agora;
-    fracaoDoTempo += (2 * passou) / SEGUNDOS_POR_PASSAGEM;
-    if (fracaoDoTempo > 1) fracaoDoTempo = -1;
-    mostrarTempo();
-    quadroDaAnimacao = requestAnimationFrame(quadro);
-  }
-
-  botaoAnimar.addEventListener("click", () => {
-    if (animando) return pararAnimacao();
-    animando = true;
-    ultimoQuadro = 0;
-    botaoAnimar.textContent = "Pausar";
-    botaoAnimar.setAttribute("aria-pressed", "true");
-    quadroDaAnimacao = requestAnimationFrame(quadro);
-  });
+  const animacao = criarAnimacao(
+    () => raiz,
+    (segundos) => {
+      fracaoDoTempo += (2 * segundos) / SEGUNDOS_POR_PASSAGEM;
+      if (fracaoDoTempo > 1) fracaoDoTempo = -1;
+      mostrarTempo();
+    },
+  );
   tempo.addEventListener("input", () => {
-    pararAnimacao();
+    animacao.parar();
     fracaoDoTempo = Number(tempo.value);
     mostrarTempo();
   });
 
-  // ---------- Controles da simulação ----------
-  const controles = new Map<ChaveDaSimulacao, Controle>();
-  for (const chave of Object.keys(LIMITES) as ChaveDaSimulacao[]) {
-    const limite = LIMITES[chave];
-    const id = `transito-${limite.url}`;
-    const entrada = h("input", {
-      type: "range",
-      id,
-      min: limite.log ? Math.log10(limite.min) : limite.min,
-      max: limite.log ? Math.log10(limite.max) : limite.max,
-      step: limite.log ? 0.001 : limite.passo,
-    });
-    const saida = h("output", { for: id });
-    const rotulo = h(
-      "label",
-      { class: "controle-sim", for: id, "data-controle": chave },
-      h("span", { class: "controle-sim-topo" }, h("span", {}, limite.rotulo), saida),
-      entrada,
-    );
-    entrada.addEventListener("input", () => {
-      const bruto = Number(entrada.value);
-      const valor = limite.log ? Number((10 ** bruto).toPrecision(4)) : bruto;
+  // ---------- Controles ----------
+  const controles = criarControles<ChaveDaSimulacao>({
+    prefixo: "transito",
+    limites: LIMITES,
+    formatar: formatarValor,
+    aoMudar(chave, valor) {
       s = comValor(s, chave, valor);
       aoMudar(chave);
-    });
-    controles.set(chave, { rotulo, entrada, saida });
-  }
-
-  function mostrarControles(): void {
-    for (const [chave, { entrada, saida }] of controles) {
-      const limite = LIMITES[chave];
-      const v = s[chave];
-      // Só reposiciona o cursor se o valor mudou por fora (planeta carregado, borda limitada), para não brigar com o arrasto.
-      const posicao = limite.log ? Math.log10(v) : v;
-      if (Math.abs(Number(entrada.value) - posicao) > (limite.log ? 0.0005 : limite.passo / 2)) {
-        entrada.value = String(posicao);
-      }
-      const texto = formatarValor(chave, v);
-      saida.textContent = texto;
-      entrada.setAttribute("aria-valuetext", texto);
-    }
-  }
+    },
+  });
 
   // ---------- Leituras ----------
   const cartoes = {
@@ -232,8 +165,17 @@ export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimula
   };
   const contas = h("dl", { class: "contas" });
 
+  const ligacao = h("a", { class: "ligacao-modulo", hidden: true }, "Ver a massa no simulador de velocidade radial");
+
   function mostrarLeituras(): void {
     const l = leitura;
+    ligacao.hidden = referencia === null;
+    if (referencia) {
+      ligacao.setAttribute(
+        "href",
+        montarHash({ modulo: "velocidade-radial", modo: "explorar", parametros: { planeta: referencia.nome } }),
+      );
+    }
     const ref = referencia ? ler(referencia.simulacao) : null;
     const doCatalogo = (texto: string) => (referencia ? ` · ${referencia.nome} no catálogo: ${texto}` : "");
     preencher(
@@ -280,43 +222,39 @@ export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimula
       : null;
   }
 
-  function gravarNaUrl(): void {
-    clearTimeout(esperaDaUrl);
-    esperaDaUrl = setTimeout(() => {
-      ctx.definirParametros({
-        ...paraParametros(s),
-        // O Aprender não compara com planetas, mas guarda o da URL para a volta ao Explorar.
-        planeta: aprender ? (ctx.parametros.planeta ?? null) : (referencia?.nome ?? null),
-        passo: aprender ? String(passo + 1) : (ctx.parametros.passo ?? null),
-      });
-    }, ESPERA_DA_URL_MS);
-  }
+  const gravarNaUrl = adiar(ESPERA_DA_URL_MS, () => {
+    ctx.definirParametros({
+      ...paraParametros(s),
+      // O Aprender não compara com planetas, mas guarda o da URL para a volta ao Explorar.
+      planeta: aprender ? (ctx.parametros.planeta ?? null) : (referencia?.nome ?? null),
+      passo: roteiro ? String(roteiro.passo() + 1) : (ctx.parametros.passo ?? null),
+    });
+  });
 
-  function anunciar(chave: ChaveDaSimulacao | null): void {
-    clearTimeout(esperaDoAnuncio);
-    esperaDoAnuncio = setTimeout(() => {
-      const inicio = chave ? `${LIMITES[chave].rotulo}: ${formatarValor(chave, s[chave])}. ` : "";
-      anuncio.textContent = leitura.haTransito
-        ? `${inicio}Profundidade ${fracaoDoBrilho(leitura.profundidade)}, duração ${decimal(leitura.duracaoHoras, 1)} horas.`
-        : `${inicio}Sem trânsito.`;
-    }, ESPERA_DO_ANUNCIO_MS);
-  }
+  let ultimaChave: ChaveDaSimulacao | null = null;
+  const anunciar = adiar(ESPERA_DO_ANUNCIO_MS, () => {
+    const inicio = ultimaChave ? `${LIMITES[ultimaChave].rotulo}: ${formatarValor(ultimaChave, s[ultimaChave])}. ` : "";
+    anuncio.textContent = leitura.haTransito
+      ? `${inicio}Profundidade ${fracaoDoBrilho(leitura.profundidade)}, duração ${decimal(leitura.duracaoHoras, 1)} horas.`
+      : `${inicio}Sem trânsito.`;
+  });
 
   function aoMudar(chave: ChaveDaSimulacao | null): void {
     recalcular();
-    mostrarControles();
+    controles.mostrar(s);
     mostrarLeituras();
     mostrarTempo();
-    mostrarRoteiro(false);
+    roteiro?.atualizar();
     botaoRuido.disabled = s.ruidoPpm === 0;
     gravarNaUrl();
-    anunciar(chave);
+    ultimaChave = chave;
+    anunciar();
   }
 
   // ---------- Ações ----------
   const botaoCsv = h("button", { class: "botao secundario", type: "button" }, "Exportar CSV");
   botaoCsv.addEventListener("click", () => {
-    baixar(nomeDoArquivo(referencia?.nome ?? null), curvaParaCsv(curva));
+    baixar(nomeDoArquivo("curva-de-luz", referencia?.nome ?? null), curvaParaCsv(curva));
     registrarEvento("transito-exportar", { pontos: curva.medida.length });
   });
   const botaoRuido = h("button", { class: "botao secundario", type: "button" }, "Nova amostra de ruído");
@@ -328,143 +266,47 @@ export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimula
   botaoPadrao.addEventListener("click", () => {
     s = { ...PADRAO };
     referencia = null;
-    campoPlaneta.value = "";
-    estadoDoCatalogo.textContent = "";
+    busca.limpar();
     aoMudar(null);
   });
 
   // ---------- Planeta do catálogo ----------
-  const lista = h("datalist", { id: "transito-lista-planetas" });
-  const campoPlaneta = h("input", {
-    type: "search",
-    id: "transito-planeta",
-    list: "transito-lista-planetas",
-    placeholder: "Ex.: Kepler-7 b",
-    autocomplete: "off",
+  const busca = criarBuscaDePlaneta<PlanetaDeTransito>({
+    prefixo: "transito",
+    descricao: "planetas de trânsito",
+    exemplo: "Kepler-7 b",
+    carregar: opcoes.carregarCatalogo ?? (() => carregarTransitos()),
+    aoEscolher(p) {
+      s = simulacaoDoPlaneta(p, s);
+      referencia = { nome: p.nome, simulacao: { ...s } };
+      busca.estado.textContent = `${p.nome}: valores do catálogo, com trânsito central${
+        p.semiEixoCalculado ? " (semi-eixo calculado pela terceira lei de Kepler)" : ""
+      }. A linha tracejada é a curva dele; mexa nos controles para comparar.`;
+      aoMudar(null);
+    },
   });
-  const estadoDoCatalogo = h("p", { class: "nota", role: "status" });
-  let catalogo: Promise<PlanetaDeTransito[]> | null = null;
-
-  function abrirCatalogo(): Promise<PlanetaDeTransito[]> {
-    if (!catalogo) {
-      estadoDoCatalogo.textContent = "Carregando os planetas de trânsito…";
-      const pedido = carregarCatalogo();
-      catalogo = pedido;
-      pedido.then(
-        (planetas) => {
-          lista.replaceChildren(...planetas.map((p) => h("option", { value: p.nome })));
-          if (estadoDoCatalogo.textContent?.startsWith("Carregando")) {
-            estadoDoCatalogo.textContent = `${milhar(planetas.length)} planetas de trânsito disponíveis.`;
-          }
-        },
-        (e: unknown) => {
-          registrarErro(e, { secao: "transito-catalogo" });
-          catalogo = null;
-          estadoDoCatalogo.textContent = "Não foi possível carregar o catálogo. Tente de novo.";
-        },
-      );
-    }
-    return catalogo;
-  }
-
-  function usarPlaneta(p: PlanetaDeTransito): void {
-    s = simulacaoDoPlaneta(p, s);
-    referencia = { nome: p.nome, simulacao: { ...s } };
-    campoPlaneta.value = p.nome;
-    estadoDoCatalogo.textContent = `${p.nome}: valores do catálogo, com trânsito central${
-      p.semiEixoCalculado ? " (semi-eixo calculado pela terceira lei de Kepler)" : ""
-    }. A linha tracejada é a curva dele; mexa nos controles para comparar.`;
-    registrarEvento("transito-planeta", { planeta: p.nome });
-    aoMudar(null);
-  }
-
-  async function procurar(nome: string): Promise<void> {
-    const alvo = nome.trim().toLowerCase();
-    if (!alvo) return;
-    try {
-      const planetas = await abrirCatalogo();
-      const achado = planetas.find((p) => p.nome.toLowerCase() === alvo);
-      if (achado) usarPlaneta(achado);
-      else estadoDoCatalogo.textContent = `Não achei “${nome.trim()}” entre os planetas de trânsito.`;
-    } catch {
-      // A mensagem de erro já está no estado do catálogo.
-    }
-  }
-
-  const formulario = h(
-    "form",
-    { class: "busca-planeta" },
-    h("label", { for: "transito-planeta" }, "Carregar um planeta real"),
-    h(
-      "div",
-      { class: "busca-planeta-linha" },
-      campoPlaneta,
-      h("button", { class: "botao", type: "submit" }, "Carregar"),
-    ),
-    lista,
-    estadoDoCatalogo,
-  );
-  formulario.addEventListener("submit", (ev) => {
-    ev.preventDefault();
-    void procurar(campoPlaneta.value);
-  });
-  campoPlaneta.addEventListener("focus", () => void abrirCatalogo().catch(() => undefined), { once: true });
-  // Escolher uma opção da lista já carrega o planeta.
-  campoPlaneta.addEventListener("change", () => void procurar(campoPlaneta.value));
 
   // ---------- Roteiro (Aprender) ----------
-  const roteiro = h("section", { class: "roteiro painel", "aria-labelledby": "roteiro-titulo" });
-  const listaDeControles = h("div", { class: "controles-sim" });
-
-  function mostrarRoteiro(trocouDePasso: boolean): void {
-    if (!aprender) return;
-    const atual = ROTEIRO[passo];
-    if (!atual) return;
-    if (trocouDePasso || !roteiro.firstChild) {
-      const anterior = h("button", { class: "botao secundario", type: "button" }, "Anterior");
-      anterior.disabled = passo === 0;
-      anterior.addEventListener("click", () => void irPara(passo - 1));
-      const ultimo = passo === ROTEIRO.length - 1;
-      const proximo = h("button", { class: "botao", type: "button" }, ultimo ? "Explorar à vontade" : "Próximo");
-      proximo.addEventListener("click", () => {
-        if (!ultimo) return void irPara(passo + 1);
-        const parametros = Object.fromEntries(
-          Object.entries(paraParametros(s)).filter((e): e is [string, string] => e[1] !== null),
-        );
-        location.hash = montarHash({ modulo: "transito", modo: "explorar", parametros });
-      });
-      roteiro.replaceChildren(
-        h("p", { class: "roteiro-passo" }, `Passo ${passo + 1} de ${ROTEIRO.length}`),
-        h("h2", { id: "roteiro-titulo", tabindex: "-1" }, atual.titulo),
-        h("p", {}, atual.texto),
-        h("p", { class: "roteiro-tarefa" }, h("strong", {}, "Experimente: "), atual.tarefa),
-        h("p", { class: "conta", "data-conta": "" }, atual.conta(s, leitura)),
-        h("div", { class: "roteiro-acoes" }, anterior, proximo),
-      );
-      const visiveis = new Set<ChaveDaSimulacao>(atual.controles);
-      for (const [chave, { rotulo }] of controles) rotulo.hidden = !visiveis.has(chave);
-      return;
-    }
-    const conta = roteiro.querySelector<HTMLElement>("[data-conta]");
-    if (conta) conta.textContent = atual.conta(s, leitura);
-  }
-
-  async function irPara(novo: number): Promise<void> {
-    if (novo < 0 || novo >= ROTEIRO.length) return;
-    passo = novo;
-    registrarEvento("transito-passo", { passo: novo + 1 });
-    mostrarRoteiro(true);
-    gravarNaUrl();
-    roteiro.querySelector<HTMLElement>("#roteiro-titulo")?.focus({ preventScroll: true });
-    await entrar(roteiro);
-  }
-
-  for (const { rotulo } of controles.values()) listaDeControles.append(rotulo);
+  const roteiro = aprender
+    ? criarRoteiro({
+        passos: ROTEIRO,
+        inicial: lerPasso(ctx.parametros.passo, ROTEIRO.length),
+        estado: () => ({ s, l: leitura }),
+        aoTrocar(_passo, chaves) {
+          controles.filtrar(chaves);
+          gravarNaUrl();
+        },
+        irParaExplorar() {
+          location.hash = montarHash({ modulo: "transito", modo: "explorar", parametros: semNulos(paraParametros(s)) });
+        },
+        telemetria: "transito-passo",
+      })
+    : null;
 
   // ---------- Página ----------
   const raiz = h(
     "div",
-    { class: "transito", "data-modo": ctx.modo },
+    { class: "simulador transito", "data-modo": ctx.modo },
     h(
       "header",
       { class: "hero hero-modulo" },
@@ -477,29 +319,30 @@ export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimula
           : "Todos os parâmetros na mão. A curva de luz é recalculada a cada mudança, com escurecimento de borda e ruído.",
       ),
     ),
-    aprender ? roteiro : null,
+    roteiro?.elemento,
     h(
       "div",
-      { class: "transito-grade" },
+      { class: "sim-grade" },
       h(
         "section",
-        { class: "transito-vistas painel", "aria-label": "Visualização" },
+        { class: "sim-vistas painel", "aria-label": "Visualização" },
         estrela.elemento,
         grafico.elemento,
         h(
           "div",
-          { class: "transito-tempo" },
-          botaoAnimar,
+          { class: "sim-tempo" },
+          animacao.botao,
           h("label", { class: "controle", for: "transito-tempo" }, "Tempo", tempo, saidaDoTempo),
         ),
         aviso,
       ),
       h(
         "section",
-        { class: "transito-controles painel", "aria-label": "Controles" },
-        aprender ? null : formulario,
-        listaDeControles,
-        h("div", { class: "transito-acoes" }, botaoCsv, botaoRuido, aprender ? null : botaoPadrao),
+        { class: "sim-controles painel", "aria-label": "Controles" },
+        aprender ? null : busca.formulario,
+        aprender ? null : ligacao,
+        controles.lista,
+        h("div", { class: "sim-acoes" }, botaoCsv, botaoRuido, aprender ? null : botaoPadrao),
       ),
     ),
     h(
@@ -525,43 +368,33 @@ export function montarSimulador(ctx: ContextoDoSimulador, opcoes: OpcoesDoSimula
   );
 
   recalcular();
-  mostrarControles();
+  controles.mostrar(s);
   mostrarLeituras();
   mostrarTempo();
-  mostrarRoteiro(true);
   botaoRuido.disabled = s.ruidoPpm === 0;
 
-  // Link compartilhado com um planeta: traz o catálogo para a comparação, sem mexer nos valores da URL.
+  // Link com um planeta. Sem outros valores na URL (como no link vindo da velocidade radial), o planeta é
+  // aplicado; com valores, eles são mantidos e o planeta entra só para comparar.
   const pedido = ctx.parametros.planeta;
   if (pedido && !aprender) {
-    campoPlaneta.value = pedido;
-    void abrirCatalogo()
+    busca.campo.value = pedido;
+    const soOPlaneta = Object.keys(semNulos(paraParametros(s))).length === 0;
+    void busca
+      .abrir()
       .then((planetas) => {
         const achado = planetas.find((p) => p.nome === pedido);
-        if (!achado) return;
+        if (!achado) {
+          busca.estado.textContent = `${pedido} não está entre os planetas de trânsito.`;
+          return;
+        }
+        if (soOPlaneta) s = simulacaoDoPlaneta(achado, s);
         referencia = { nome: achado.nome, simulacao: simulacaoDoPlaneta(achado, s) };
-        estadoDoCatalogo.textContent = `Comparando com ${achado.nome} (linha tracejada).`;
+        busca.estado.textContent = `Comparando com ${achado.nome} (linha tracejada).`;
         aoMudar(null);
       })
       .catch(() => undefined);
   }
   return raiz;
-}
-
-/** Cartão de leitura, no mesmo formato dos cartões do catálogo. */
-function criarCartao(rotulo: string): { elemento: HTMLElement; valor: HTMLElement; detalhe: HTMLElement } {
-  const valor = h("span", { class: "valor" });
-  const detalhe = h("span", { class: "detalhe" });
-  return {
-    elemento: h("div", { class: "cartao" }, valor, h("span", { class: "rotulo" }, rotulo), detalhe),
-    valor,
-    detalhe,
-  };
-}
-
-function preencher(cartao: ReturnType<typeof criarCartao>, valor: string, detalhe: string): void {
-  cartao.valor.textContent = valor;
-  cartao.detalhe.textContent = detalhe;
 }
 
 export async function montar(ctx: ContextoDoModulo): Promise<void> {

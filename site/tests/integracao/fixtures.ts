@@ -81,3 +81,20 @@ export function esperar(ms = 40): Promise<void> {
 export function esperarAte<T>(verificacao: () => T | Promise<T>): Promise<T> {
   return vi.waitFor(verificacao, { timeout: 5000 });
 }
+
+/** Contexto 2D falso: o happy-dom não desenha, então o teste confere as chamadas que o pintor faz. */
+export function contextoFalso() {
+  const chamadas: { nome: string; args: unknown[] }[] = [];
+  const contexto = new Proxy(
+    {},
+    {
+      get(_alvo, nome: string) {
+        if (nome === "createRadialGradient")
+          return () => ({ addColorStop: (...args: unknown[]) => chamadas.push({ nome: "addColorStop", args }) });
+        return (...args: unknown[]) => chamadas.push({ nome, args });
+      },
+      set: () => true,
+    },
+  );
+  return { contexto, chamadas, de: (nome: string) => chamadas.filter((c) => c.nome === nome) };
+}

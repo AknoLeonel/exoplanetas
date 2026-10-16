@@ -1,17 +1,9 @@
 import { R_SOL, R_TERRA } from "../lib/fisica/constantes";
 import { compacto, decimal, fracaoDoBrilho, milhar } from "../lib/formato";
 import { type ChaveDaSimulacao, type Leitura, ler, type Simulacao } from "../lib/simulacao-transito";
+import type { PassoDoRoteiro } from "./simulador";
 
-export interface PassoDoRoteiro {
-  titulo: string;
-  texto: string;
-  /** O que a pessoa deve fazer neste passo. */
-  tarefa: string;
-  /** Controles que aparecem no passo. Vazio: só o tempo e a animação. */
-  controles: readonly ChaveDaSimulacao[];
-  /** A conta do passo, com os números da simulação atual. */
-  conta(s: Simulacao, l: Leitura): string;
-}
+export type PassoDoTransito = PassoDoRoteiro<Simulacao, Leitura, ChaveDaSimulacao>;
 
 const KM_TERRA = R_TERRA / 1000;
 const KM_SOL = R_SOL / 1000;
@@ -25,7 +17,7 @@ function contaDaProfundidade(s: Simulacao, l: Leitura): string {
 }
 
 /** Roteiro do modo Aprender: cada passo explica uma parte da curva e pede para mexer num controle. */
-export const ROTEIRO: readonly PassoDoRoteiro[] = [
+export const ROTEIRO: readonly PassoDoTransito[] = [
   {
     titulo: "O planeta passa na frente da estrela",
     texto:
@@ -89,10 +81,3 @@ export const ROTEIRO: readonly PassoDoRoteiro[] = [
       `Rp = R★ · √δ = ${compacto(s.raioEstrelaRsol)} × ${milhar(KM_SOL)} km × √${decimal(l.profundidade, 5)} = ${compacto(l.raioInferidoRterra)} R⊕ (o valor simulado é ${compacto(s.raioPlanetaRterra)} R⊕). Ruído: ${milhar(s.ruidoPpm)} ppm, contra uma queda de ${fracaoDoBrilho(l.profundidade)}.`,
   },
 ];
-
-/** Passo pedido na URL (1 a N), dentro da faixa. */
-export function lerPasso(texto: string | undefined): number {
-  const n = Number(texto);
-  if (!Number.isInteger(n)) return 0;
-  return Math.min(ROTEIRO.length - 1, Math.max(0, n - 1));
-}

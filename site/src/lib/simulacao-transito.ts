@@ -1,3 +1,4 @@
+import { aleatorio, gaussiano } from "./aleatorio";
 import { DIA, G, M_SOL, R_SOL, R_TERRA, UA } from "./fisica/constantes";
 import { semiEixoUA } from "./fisica/orbita";
 import {
@@ -9,6 +10,7 @@ import {
   parametroDeImpacto,
   profundidadeNoCentro,
 } from "./fisica/transito";
+import { criarParametros, type LimiteDoControle } from "./parametros";
 import { ErroDados } from "./tipos";
 
 /** Tudo o que o simulador de trânsito deixa mexer. */
@@ -31,18 +33,6 @@ export interface Simulacao {
 }
 
 export type ChaveDaSimulacao = Exclude<keyof Simulacao, "semente">;
-
-export interface LimiteDoControle {
-  /** Nome curto do parâmetro na URL. */
-  url: string;
-  rotulo: string;
-  unidade: string;
-  min: number;
-  max: number;
-  /** Controle em escala logarítmica: os valores vão de frações a milhares. */
-  log: boolean;
-  passo: number;
-}
 
 /**
  * Faixas dos controles. Cobrem os planetas de trânsito do catálogo (raio de 0,3 a 33 R⊕, estrela de
@@ -92,12 +82,6 @@ export const PADRAO: Readonly<Simulacao> = {
   semente: 1,
 };
 
-const CHAVES = Object.keys(LIMITES) as ChaveDaSimulacao[];
-
-function limitar(valor: number, { min, max }: LimiteDoControle): number {
-  return Math.min(max, Math.max(min, valor));
-}
-
 /**
  * A intensidade na borda é 1 − u₁ − u₂; acima de 1 a borda ficaria com brilho negativo.
  * Reduz u₂ para manter u₁ + u₂ ≤ 1.
@@ -106,36 +90,14 @@ function bordaNaoNegativa(s: Simulacao): Simulacao {
   return s.u1 + s.u2 > 1 ? { ...s, u2: 1 - s.u1 } : s;
 }
 
+const PARAMETROS = criarParametros(LIMITES, PADRAO, bordaNaoNegativa);
+
 /** Lê a simulação da URL. Parâmetro ausente ou inválido vale o padrão; fora da faixa, é trazido para dentro. */
-export function lerSimulacao(parametros: Readonly<Record<string, string>>): Simulacao {
-  const s: Simulacao = { ...PADRAO };
-  for (const chave of CHAVES) {
-    const limite = LIMITES[chave];
-    const texto = parametros[limite.url];
-    const valor = texto === undefined || texto.trim() === "" ? Number.NaN : Number(texto);
-    if (Number.isFinite(valor)) s[chave] = limitar(valor, limite);
-  }
-  const semente = Number(parametros.semente);
-  if (Number.isInteger(semente) && semente > 0) s.semente = semente;
-  return bordaNaoNegativa(s);
-}
-
+export const lerSimulacao = PARAMETROS.ler;
 /** Muda um parâmetro, respeitando a faixa e a borda não negativa. */
-export function comValor(s: Simulacao, chave: ChaveDaSimulacao, valor: number): Simulacao {
-  if (!Number.isFinite(valor)) return s;
-  return bordaNaoNegativa({ ...s, [chave]: limitar(valor, LIMITES[chave]) });
-}
-
+export const comValor = PARAMETROS.comValor;
 /** A simulação como parâmetros de URL, só com o que difere do padrão. */
-export function paraParametros(s: Simulacao): Record<string, string | null> {
-  const saida: Record<string, string | null> = {};
-  for (const chave of CHAVES) {
-    const { url } = LIMITES[chave];
-    saida[url] = s[chave] === PADRAO[chave] ? null : String(Number(s[chave].toPrecision(6)));
-  }
-  saida.semente = s.semente === PADRAO.semente ? null : String(s.semente);
-  return saida;
-}
+export const paraParametros = PARAMETROS.paraParametros;
 
 /** Geometria em raios estelares, a partir das unidades dos controles. */
 export function geometria(s: Simulacao): GeometriaDoTransito {
@@ -205,25 +167,6 @@ export function meiaJanelaDias(s: Simulacao): number {
   const g = geometria(s);
   if (orbitaDentroDaEstrela(g)) return s.periodoDias / 20;
   return Math.min(0.8 * duracaoDoTransitoDias({ ...g, inclinacaoGraus: 90 }), s.periodoDias / 2);
-}
-
-/** Gerador pseudoaleatório pequeno e determinístico (mulberry32). Devolve números em [0, 1). */
-export function aleatorio(semente: number): () => number {
-  let estado = semente >>> 0;
-  return () => {
-    estado = (estado + 0x6d2b79f5) >>> 0;
-    let t = estado;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** Normal padrão por Box-Muller. */
-function gaussiano(sortear: () => number): number {
-  const u = 1 - sortear(); // (0, 1]: evita log(0)
-  const v = sortear();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 
 export interface Curva {

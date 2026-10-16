@@ -107,7 +107,7 @@ describe("shell", () => {
   });
 
   it("módulo desconhecido ou ainda 'em breve' cai no início", async () => {
-    window.location.hash = "#/velocidade-radial";
+    window.location.hash = "#/ml";
     const inicio = falso();
     iniciar({ inicio: async () => inicio, catalogo: async () => falso() });
     await esperarAte(() => expect(inicio.montar).toHaveBeenCalledOnce());

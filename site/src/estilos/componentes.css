@@ -799,7 +799,7 @@ a.cartao-modulo:hover {
   font-weight: 600;
 }
 
-/* ---------- Simulador de trânsito ---------- */
+/* ---------- Simuladores (trânsito, velocidade radial) ---------- */
 .hero-modulo {
   padding-top: 32px;
 }
@@ -808,7 +808,7 @@ a.cartao-modulo:hover {
   padding-top: 48px;
 }
 
-.transito-grade {
+.sim-grade {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   gap: 16px;
@@ -817,12 +817,12 @@ a.cartao-modulo:hover {
 }
 
 @media (max-width: 860px) {
-  .transito-grade {
+  .sim-grade {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.transito-vistas {
+.sim-vistas {
   display: grid;
   gap: 12px;
 }
@@ -842,18 +842,18 @@ a.cartao-modulo:hover {
   height: 100%;
 }
 
-.transito-tempo {
+.sim-tempo {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px 16px;
 }
 
-.aviso-transito:empty {
+.aviso-sim:empty {
   display: none;
 }
 
-.aviso-transito {
+.aviso-sim {
   padding: 10px 14px;
   border-radius: 10px;
   background: var(--superficie-2);
@@ -861,7 +861,7 @@ a.cartao-modulo:hover {
   font-size: 0.88rem;
 }
 
-.transito-controles {
+.sim-controles {
   display: grid;
   gap: 18px;
 }
@@ -898,11 +898,11 @@ a.cartao-modulo:hover {
   accent-color: var(--destaque);
 }
 
-.transito-tempo .controle input[type="range"] {
+.sim-tempo .controle input[type="range"] {
   width: min(320px, 50vw);
 }
 
-.transito-acoes,
+.sim-acoes,
 .roteiro-acoes {
   display: flex;
   flex-wrap: wrap;
@@ -990,4 +990,25 @@ a.cartao-modulo:hover {
 
 .contas dd {
   margin: 0;
+}
+
+.vista-orbita {
+  height: 240px;
+}
+
+.vista-orbita canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ligacao-modulo {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--destaque);
+  font-size: 0.85rem;
+}
+
+.ligacao-modulo[hidden] {
+  display: none;
 }

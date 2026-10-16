@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { duracaoDoTransitoDias } from "../../src/lib/fisica/transito";
 import {
-  aleatorio,
   comValor,
   curvaParaCsv,
   geometria,
@@ -165,17 +164,6 @@ describe("curva simulada", () => {
     expect(Math.abs(media)).toBeLessThan(1e-4);
     expect(desvio).toBeGreaterThan(0.00095);
     expect(desvio).toBeLessThan(0.00105);
-  });
-
-  it("aleatorio fica em [0, 1) e repete com a mesma semente", () => {
-    const a = aleatorio(42);
-    const b = aleatorio(42);
-    for (let i = 0; i < 1000; i++) {
-      const x = a();
-      expect(x).toBe(b());
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(x).toBeLessThan(1);
-    }
   });
 
   it("exporta CSV com cabeçalho, horas e ponto decimal", () => {

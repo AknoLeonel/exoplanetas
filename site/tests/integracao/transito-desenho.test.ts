@@ -1,24 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PADRAO, simularCurva } from "../../src/lib/simulacao-transito";
 import { criarCurvaDeLuz, criarVistaDaEstrela, type EstadoDaCurva } from "../../src/ui/transito-desenho";
-import { esperarAte } from "./fixtures";
-
-/** Contexto 2D falso: o happy-dom não desenha, então o teste confere as chamadas que o pintor faz. */
-function contextoFalso() {
-  const chamadas: { nome: string; args: unknown[] }[] = [];
-  const contexto = new Proxy(
-    {},
-    {
-      get(_alvo, nome: string) {
-        if (nome === "createRadialGradient")
-          return () => ({ addColorStop: (...args: unknown[]) => chamadas.push({ nome: "addColorStop", args }) });
-        return (...args: unknown[]) => chamadas.push({ nome, args });
-      },
-      set: () => true,
-    },
-  );
-  return { contexto, chamadas, de: (nome: string) => chamadas.filter((c) => c.nome === nome) };
-}
+import { contextoFalso, esperarAte } from "./fixtures";
 
 let falso: ReturnType<typeof contextoFalso>;
 

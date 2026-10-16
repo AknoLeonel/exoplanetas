@@ -75,21 +75,19 @@ describe("simulador de trânsito, modo Explorar", () => {
     expect(rp.getAttribute("aria-valuetext")).toBe(formatarValor("raioPlanetaRterra", 31.16));
     await esperarAte(() => expect(definirParametros).toHaveBeenCalledWith(expect.objectContaining({ rp: "31.16" })));
     await esperarAte(() =>
-      expect(raiz.querySelector("[data-anuncio-transito]")?.textContent).toMatch(
-        /^Raio do planeta: .*Profundidade 5,76%/,
-      ),
+      expect(raiz.querySelector("[data-anuncio]")?.textContent).toMatch(/^Raio do planeta: .*Profundidade 5,76%/),
     );
   });
 
   it("inclinação baixa: avisa que não há trânsito", () => {
     const { raiz } = abrir("explorar", { i: "75" });
     expect(cartao(raiz, "Profundidade")).toBe("sem trânsito");
-    expect(raiz.querySelector(".aviso-transito")?.textContent).toMatch(/não há trânsito/);
+    expect(raiz.querySelector(".aviso-sim")?.textContent).toMatch(/não há trânsito/);
   });
 
   it("órbita dentro da estrela: avisa que o sistema não é possível", () => {
     const { raiz } = abrir("explorar", { a: "0.003", rs: "5" });
-    expect(raiz.querySelector(".aviso-transito")?.textContent).toMatch(/dentro da estrela/);
+    expect(raiz.querySelector(".aviso-sim")?.textContent).toMatch(/dentro da estrela/);
   });
 
   it("carrega um planeta do catálogo e compara com ele", async () => {
@@ -132,6 +130,18 @@ describe("simulador de trânsito, modo Explorar", () => {
     const { raiz } = abrir("explorar", { planeta: "HD 209458 b", rp: "2" });
     await esperarAte(() => expect(raiz.textContent).toContain("HD 209458 b no catálogo: 1,44%"));
     expect(controle(raiz, "rp").getAttribute("aria-valuetext")).toBe("2,00 × Terra");
+  });
+
+  it("link só com o planeta (vindo da velocidade radial) aplica os valores dele e oferece o caminho de volta", async () => {
+    const { raiz } = abrir("explorar", { planeta: "TRAPPIST-1 e" });
+    await esperarAte(() => expect(controle(raiz, "rs").getAttribute("aria-valuetext")).toBe("0,119 × Sol"));
+    const volta = raiz.querySelector<HTMLAnchorElement>(".ligacao-modulo");
+    expect(volta?.hidden).toBe(false);
+    expect(volta?.getAttribute("href")).toBe("#/velocidade-radial?planeta=TRAPPIST-1+e");
+    const sem = abrir("explorar", { planeta: "Ninguém b" });
+    await esperarAte(() =>
+      expect(sem.raiz.querySelector(".busca-planeta .nota")?.textContent).toContain("não está entre os planetas"),
+    );
   });
 
   it("exporta a curva em CSV e sorteia outro ruído", () => {
