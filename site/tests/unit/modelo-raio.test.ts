@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { readFileSync, statSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   comValorML,
   entradaDoPlaneta,
@@ -14,6 +14,7 @@ import {
   type ModeloRaio,
   NOMES_DAS_VARIAVEIS,
   PADRAO_ML,
+  type PlanetaDoTreino,
   paraParametrosML,
   prever,
   VARIAVEIS,
@@ -23,10 +24,17 @@ import { ErroDados } from "../../src/lib/tipos";
 
 const ARQUIVO = new URL("../../public/dados/modelo-raio.json", import.meta.url);
 const bruto = JSON.parse(readFileSync(ARQUIVO, "utf-8"));
-const modelo = lerModelo(bruto);
-const planetas = lerPlanetasDoTreino(
-  JSON.parse(readFileSync(new URL("../../public/dados/modelo-planetas.json", import.meta.url), "utf-8")),
+const brutoDosPlanetas = JSON.parse(
+  readFileSync(new URL("../../public/dados/modelo-planetas.json", import.meta.url), "utf-8"),
 );
+// Lidos dentro da execução, não na importação: o Stryker só vê um mutante nos leitores se eles rodarem
+// depois que o mutante é ativado: o que roda na importação ou num beforeAll conta como "estático" e escapa.
+let modelo: ModeloRaio;
+let planetas: PlanetaDoTreino[];
+beforeEach(() => {
+  modelo = lerModelo(bruto);
+  planetas = lerPlanetasDoTreino(brutoDosPlanetas);
+});
 
 /** Limite de tamanho do modelo: passar disso pede menos árvores ou outro formato. */
 const LIMITE_DO_MODELO_KB = 600;
