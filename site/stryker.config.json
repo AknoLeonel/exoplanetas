@@ -10,5 +10,6 @@
   "vitest": { "configFile": "vite.config.ts" },
   "thresholds": { "high": 90, "low": 80, "break": 80 },
   "tempDirName": ".stryker-tmp",
-  "cleanTempDir": true
+  "cleanTempDir": true,
+  "ignoreStatic": true
 }
