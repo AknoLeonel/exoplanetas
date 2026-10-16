@@ -219,3 +219,76 @@ describe("planetas do catálogo", () => {
     expect(densidadeDoPlaneta({ ...gj, raioRterra: 10 })?.piso).toBe(true);
   });
 });
+
+describe("contratos que a interface usa", () => {
+  it("faixas: rótulos e URLs únicos, escala log só nas que cobrem ordens de grandeza, e as unidades mostradas", () => {
+    const limites = Object.values(LIMITES_VR);
+    expect(new Set(limites.map((l) => l.url)).size).toBe(limites.length);
+    expect(new Set(limites.map((l) => l.rotulo)).size).toBe(limites.length);
+    for (const l of limites) {
+      expect(l.rotulo.length).toBeGreaterThan(3);
+      expect(l.log).toBe(l.min > 0 && l.max / l.min >= 100);
+    }
+    expect(Object.fromEntries(Object.entries(LIMITES_VR).map(([k, l]) => [k, l.unidade]))).toEqual({
+      massaPlanetaMterra: "× Terra",
+      periodoDias: "dias",
+      massaEstrelaMsol: "× Sol",
+      excentricidade: "",
+      omegaGraus: "°",
+      inclinacaoGraus: "°",
+      ruidoMs: "m/s",
+    });
+  });
+
+  it("o ruído é exatamente ruído × normal sorteada com a semente, somado ao modelo", async () => {
+    const { aleatorio, gaussiano } = await import("../../src/lib/aleatorio");
+    const s = { ...PADRAO_VR, ruidoMs: 7, semente: 5 };
+    const curva = simularCurvaVR(s, 5);
+    const sortear = aleatorio(5);
+    curva.medida.forEach((p, i) => {
+      expect(p.velocidadeMs - (curva.modelo[i]?.velocidadeMs ?? 0)).toBeCloseTo(7 * gaussiano(sortear), 10);
+    });
+    expect(simularCurvaVR(PADRAO_VR, 2).modelo).toHaveLength(2);
+  });
+
+  it("ω gira a órbita: com ω = 90° o planeta começa na linha de visada; com ω = 0°, de lado", () => {
+    const a90 = posicoesNaOrbita({ ...PADRAO_VR, omegaGraus: 90 }, 0).planeta;
+    const a0 = posicoesNaOrbita({ ...PADRAO_VR, omegaGraus: 0 }, 0).planeta;
+    const r = Math.hypot(a0.x, a0.z);
+    expect(a90.x).toBeCloseTo(0, 9);
+    expect(a90.z).toBeCloseTo(r, 9);
+    expect(a0.z).toBeCloseTo(0, 9);
+    const a30 = posicoesNaOrbita({ ...PADRAO_VR, omegaGraus: 30 }, 0).planeta;
+    expect(a30.x).toBeCloseTo(r * Math.cos(Math.PI / 6), 9);
+    expect(a30.z).toBeCloseTo(r * Math.sin(Math.PI / 6), 9);
+  });
+
+  it("cada campo inválido do velocidades.json é recusado, com a origem do erro", () => {
+    const colunas = ["nome", "periodo", "massa", "tipo_massa", "massa_estrela", "excentricidade", "raio"];
+    const ok = ["A b", 10, 5, "minima", 1, 0.1, null];
+    const tentar = (linha: unknown[]) => () => lerVelocidades({ colunas, linhas: [linha] });
+    expect(lerVelocidades({ colunas, linhas: [ok] })).toHaveLength(1);
+    for (const [i, ruim] of [
+      [0, 3],
+      [1, null],
+      [1, "10"],
+      [1, Number.POSITIVE_INFINITY],
+      [2, -5],
+      [4, null],
+      [5, -0.1],
+      [5, 1],
+      [5, "0.1"],
+    ] as const) {
+      const linha = [...ok];
+      linha[i] = ruim;
+      expect(tentar(linha), `coluna ${i} = ${String(ruim)}`).toThrow(ErroDados);
+    }
+    expect(lerVelocidades({ colunas, linhas: [["B b", 10, 5, "minima", 1, 0.1, "grande"]] })[0]?.raioRterra).toBeNull();
+    expect(() => lerVelocidades({ colunas: [...colunas.slice(0, 6), "outra"], linhas: [] })).toThrow("fora do formato");
+    try {
+      lerVelocidades({ colunas, linhas: [7] });
+    } catch (e) {
+      expect((e as ErroDados).origem).toBe("velocidades");
+    }
+  });
+});
