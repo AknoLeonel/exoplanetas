@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { escalaLog } from "../../src/lib/escala";
 import { milhar } from "../../src/lib/formato";
+import { modulosDisponiveis } from "../../src/lib/modulos";
 import { paraMs } from "../../src/lib/tempo";
 import { DOMINIO_PERIODO, DOMINIO_RAIO, MARGEM } from "../../src/ui/grafico-periodo-raio";
 import { metricas, planetas } from "./dados";
@@ -340,7 +341,8 @@ test.describe("shell de módulos", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Laboratório de astrofísica");
     await expect(page).toHaveTitle("Exoplanetas");
     await expect(page.getByRole("heading", { name: "Dois jeitos de usar cada módulo" })).toBeVisible();
-    await expect(page.locator("a.cartao-modulo")).toHaveCount(1);
+    // Um cartão com link por módulo disponível (o início não tem cartão).
+    await expect(page.locator("a.cartao-modulo")).toHaveCount(modulosDisponiveis().length - 1);
     await expect(page.locator(".cartao-modulo.em-breve").first()).toContainText("Em breve");
     expect(problemas).toEqual([]);
   });

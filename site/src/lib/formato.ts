@@ -43,3 +43,9 @@ export function celsius(kelvin: number): string {
 export function anosLuz(parsecs: number): string {
   return `${milhar(Math.round(parsecs * 3.26156))} anos-luz`;
 }
+
+/** Fração do brilho em porcentagem ou, abaixo de 0,1%, em partes por milhão: 0.0144 -> "1,44%", 0.000084 -> "84 ppm". */
+export function fracaoDoBrilho(fracao: number): string {
+  if (fracao >= 0.001) return percentual(fracao * 100, fracao >= 0.1 ? 1 : 2);
+  return `${milhar(Math.round(fracao * 1e6))} ppm`;
+}
