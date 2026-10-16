@@ -18,6 +18,12 @@ CASAS = {"periodo": 4, "raio": 3, "massa": 2, "temperatura": 0, "distancia": 1}
 COLUNAS_TRANSITOS = ["nome", "periodo", "raio", "raio_estrela", "semi_eixo", "massa_estrela"]
 CASAS_TRANSITOS = {"periodo": 6, "raio": 3, "raio_estrela": 4, "semi_eixo": 5, "massa_estrela": 3}
 
+# Ordem das colunas de velocidades.json, para o simulador de velocidade radial.
+COLUNAS_VELOCIDADES = ["nome", "periodo", "massa", "tipo_massa", "massa_estrela", "excentricidade", "raio"]
+CASAS_VELOCIDADES = {"periodo": 6, "massa": 3, "massa_estrela": 3, "excentricidade": 4, "raio": 3}
+# No arquivo da NASA, "Mass" é a massa verdadeira (inclinação conhecida) e "Msini" a massa mínima m·sin i.
+TIPOS_DE_MASSA = {"Mass": "verdadeira", "Msini": "minima"}
+
 
 def _valor(x, casas: int | None):
     """Número JSON: NaN vira None e floats são arredondados."""
@@ -77,6 +83,30 @@ def transitos(df: pd.DataFrame) -> dict:
     return {"colunas": COLUNAS_TRANSITOS, "linhas": linhas}
 
 
+def velocidades(df: pd.DataFrame) -> dict:
+    """Planetas com massa (verdadeira ou mínima), período e massa da estrela, para o simulador de velocidade radial.
+
+    O raio só vem quando foi medido num trânsito: com massa e raio, o site mostra a densidade.
+    Excentricidade ausente vai como None (o site usa órbita circular).
+    """
+    t = df[df["pl_orbper"].gt(0) & df["pl_bmasse"].gt(0) & df["st_mass"].gt(0) & df["pl_bmassprov"].isin(TIPOS_DE_MASSA)]
+    t = t.assign(medido=analise.raio_e_medido(t)).sort_values("pl_name")
+    c = CASAS_VELOCIDADES
+    linhas = [
+        [
+            str(r.pl_name),
+            _valor(r.pl_orbper, c["periodo"]),
+            _valor(r.pl_bmasse, c["massa"]),
+            TIPOS_DE_MASSA[r.pl_bmassprov],
+            _valor(r.st_mass, c["massa_estrela"]),
+            _valor(r.pl_orbeccen, c["excentricidade"]),
+            _valor(r.pl_rade if r.medido else None, c["raio"]),
+        ]
+        for r in t.itertuples()
+    ]
+    return {"colunas": COLUNAS_VELOCIDADES, "linhas": linhas}
+
+
 def descobertas(df: pd.DataFrame) -> dict:
     """Descobertas por ano e método, para o gráfico de barras empilhadas."""
     tabela = analise.descobertas_por_ano(df)
@@ -117,6 +147,7 @@ def gerar(df: pd.DataFrame, metricas: dict) -> dict[str, dict]:
     return {
         "planetas.json": planetas_com_raio(df),
         "transitos.json": transitos(df),
+        "velocidades.json": velocidades(df),
         "descobertas.json": descobertas(df),
         "metricas.json": sem_nan(metricas),
         "parametros.json": parametros(),

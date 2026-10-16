@@ -28,6 +28,9 @@
   /* Simulador de trânsito: a estrela (o escurecimento de borda é desenhado por cima) e a silhueta do planeta. */
   --estrela: #f4b63f;
   --planeta: #141413;
+  /* Doppler: a luz da estrela vai para o azul quando ela se aproxima e para o vermelho quando se afasta. */
+  --aproximando: #2a78d6;
+  --afastando: #d03b2a;
 
   /* Método de descoberta: categórica, na ordem fixa da paleta validada. */
   --metodo-transit: #2a78d6;
@@ -76,6 +79,8 @@
     --deserto-borda: #d95926;
     --estrela: #e9a52c;
     --planeta: #050505;
+    --aproximando: #5b9ff0;
+    --afastando: #f06a55;
     --metodo-transit: #3987e5;
     --metodo-radial-velocity: #d95926;
     --metodo-microlensing: #199e70;
@@ -109,6 +114,8 @@
   --deserto-borda: #d95926;
   --estrela: #e9a52c;
   --planeta: #050505;
+  --aproximando: #5b9ff0;
+  --afastando: #f06a55;
   --metodo-transit: #3987e5;
   --metodo-radial-velocity: #d95926;
   --metodo-microlensing: #199e70;

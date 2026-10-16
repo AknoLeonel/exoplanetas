@@ -1,4 +1,4 @@
-import { DIA, G, M_JUPITER, M_SOL } from "./constantes";
+import { C_LUZ, DIA, G, M_JUPITER, M_SOL } from "./constantes";
 import { anomaliaVerdadeiraNoTempo, assertExcentricidade, assertPositivo } from "./orbita";
 
 /**
@@ -59,4 +59,10 @@ export function velocidadeRadialMs(args: {
   const nu = anomaliaVerdadeiraNoTempo(tempoDias, periodoDias, excentricidade);
   const omega = (argumentoDoPeriastroGraus * Math.PI) / 180;
   return K * (Math.cos(nu + omega) + excentricidade * Math.cos(omega));
+}
+
+/** Deslocamento Doppler (mesma unidade de `comprimentoDeOnda`) de uma linha vista com velocidade radial `velocidadeMs`. Positivo = para o vermelho. */
+export function deslocamentoDoppler(comprimentoDeOnda: number, velocidadeMs: number): number {
+  assertPositivo(comprimentoDeOnda, "comprimentoDeOnda");
+  return (comprimentoDeOnda * velocidadeMs) / C_LUZ;
 }

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { duracaoDoTransitoDias } from "../../src/lib/fisica/transito";
 import {
-  aleatorio,
   comValor,
   curvaParaCsv,
   geometria,
@@ -167,17 +166,6 @@ describe("curva simulada", () => {
     expect(desvio).toBeLessThan(0.00105);
   });
 
-  it("aleatorio fica em [0, 1) e repete com a mesma semente", () => {
-    const a = aleatorio(42);
-    const b = aleatorio(42);
-    for (let i = 0; i < 1000; i++) {
-      const x = a();
-      expect(x).toBe(b());
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(x).toBeLessThan(1);
-    }
-  });
-
   it("exporta CSV com cabeçalho, horas e ponto decimal", () => {
     const csv = curvaParaCsv(simularCurva({ ...PADRAO, ruidoPpm: 100 }, 3));
     const [cabecalho, primeira, , terceira, fim] = csv.split("\n");
@@ -234,5 +222,74 @@ describe("planetas do catálogo", () => {
       periodoDias: 3.524749,
       semiEixoUA: 0.04707,
     });
+  });
+});
+
+describe("contratos que a interface usa", () => {
+  it("faixas: rótulos e URLs únicos, escala log só nas que cobrem ordens de grandeza, e as unidades mostradas", () => {
+    const limites = Object.values(LIMITES);
+    expect(new Set(limites.map((l) => l.url)).size).toBe(limites.length);
+    expect(new Set(limites.map((l) => l.rotulo)).size).toBe(limites.length);
+    for (const l of limites) {
+      expect(l.rotulo.length).toBeGreaterThan(3);
+      expect(l.log).toBe(l.min > 0 && l.max / l.min >= 100);
+    }
+    expect(Object.fromEntries(Object.entries(LIMITES).map(([k, l]) => [k, l.unidade]))).toEqual({
+      raioPlanetaRterra: "× Terra",
+      raioEstrelaRsol: "× Sol",
+      periodoDias: "dias",
+      semiEixoUA: "UA",
+      inclinacaoGraus: "°",
+      u1: "",
+      u2: "",
+      ruidoPpm: "ppm",
+    });
+    // u₂ pode ser negativo (borda mais clara que o meio do disco, em algumas leis de escurecimento).
+    expect(LIMITES.u2.min).toBeLessThan(0);
+  });
+
+  it("o ruído é exatamente ruído × normal sorteada com a semente, somado ao modelo", async () => {
+    const { aleatorio, gaussiano } = await import("../../src/lib/aleatorio");
+    const s = { ...PADRAO, inclinacaoGraus: 75, ruidoPpm: 300, semente: 4 };
+    const curva = simularCurva(s, 5);
+    const sortear = aleatorio(4);
+    curva.medida.forEach((p, i) => {
+      expect(p.fluxo - (curva.modelo[i]?.fluxo ?? 0)).toBeCloseTo(300e-6 * gaussiano(sortear), 12);
+    });
+  });
+
+  it("com a órbita dentro da estrela, a curva é plana mas os tempos cobrem a janela", () => {
+    const s = { ...PADRAO, semiEixoUA: 0.003, raioEstrelaRsol: 5 };
+    const curva = simularCurva(s, 5);
+    const janela = meiaJanelaDias(s);
+    [-janela, -janela / 2, 0, janela / 2, janela].forEach((esperado, i) => {
+      expect(curva.modelo[i]?.tempoDias).toBeCloseTo(esperado, 12);
+    });
+    expect(janela).toBeLessThan(s.periodoDias);
+  });
+
+  it("cada campo inválido do transitos.json é recusado, com a origem do erro", () => {
+    const colunas = ["nome", "periodo", "raio", "raio_estrela", "semi_eixo", "massa_estrela"];
+    const ok: unknown[] = ["A b", 10, 2, 1, 0.1, 1];
+    expect(lerTransitos({ colunas, linhas: [ok] })).toHaveLength(1);
+    for (const [i, ruim] of [
+      [0, 3],
+      [1, null],
+      [1, "10"],
+      [2, Number.NaN],
+      [3, 0],
+    ] as const) {
+      const linha = [...ok];
+      linha[i] = ruim;
+      expect(() => lerTransitos({ colunas, linhas: [linha] }), `coluna ${i}`).toThrow(ErroDados);
+    }
+    // Só a massa da estrela basta para o semi-eixo; só o semi-eixo também.
+    expect(lerTransitos({ colunas, linhas: [["B b", 10, 2, 1, 0.1, null]] })[0]?.semiEixoCalculado).toBe(false);
+    expect(() => lerTransitos({ colunas: [...colunas.slice(0, 5), "outra"], linhas: [] })).toThrow("fora do formato");
+    try {
+      lerTransitos({ colunas, linhas: [7] });
+    } catch (e) {
+      expect((e as ErroDados).origem).toBe("transitos");
+    }
   });
 });

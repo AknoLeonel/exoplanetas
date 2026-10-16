@@ -44,7 +44,7 @@ test.describe("simulador de trânsito", () => {
     for (let i = 0; i < 40; i++) await page.keyboard.press("ArrowRight");
     await expect(profundidade(page)).not.toHaveText(antes ?? "");
     await expect(page).toHaveURL(/rp=/);
-    await expect(page.locator("[data-anuncio-transito]")).toContainText("Raio do planeta");
+    await expect(page.locator("[data-anuncio]")).toContainText("Raio do planeta");
     // A mesma URL reabre o mesmo estado.
     const depois = await profundidade(page).textContent();
     await page.reload();

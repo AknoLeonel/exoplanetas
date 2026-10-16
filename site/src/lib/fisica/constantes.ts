@@ -23,3 +23,7 @@ export const M_JUPITER = 1.89813e27; // kg (GM♃ nominal / G)
 /** Fluxos estelares limite da zona habitável (relativos ao que a Terra recebe), de Kopparapu et al. 2013, com as correções de 2014. */
 export const FLUXO_LIMITE_INTERNO = 1.107; // estufa descontrolada
 export const FLUXO_LIMITE_EXTERNO = 0.356; // estufa máxima
+
+export const C_LUZ = 299_792_458; // m/s (exata, SI)
+/** Linha H-alfa do hidrogênio, comprimento de onda no ar (NIST Atomic Spectra Database). */
+export const LAMBDA_H_ALFA_NM = 656.28;
