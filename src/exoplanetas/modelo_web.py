@@ -6,6 +6,8 @@ O gradient boosting do scikit-learn é uma soma de árvores de regressão. Cada 
 contrato do site conferir que as duas contas batem.
 """
 
+import math
+
 import numpy as np
 import pandas as pd
 
@@ -154,3 +156,24 @@ def arquivos(base: pd.DataFrame, previsoes_fora_da_dobra: np.ndarray, resultado:
         "modelo-raio.json": exportar(base, previsoes_fora_da_dobra, resultado),
         "modelo-planetas.json": planetas_do_treino(base),
     }
+
+
+def diferencas(antigo, novo, tolerancia: float = 1e-9, caminho: str = "") -> list[str]:
+    """Onde dois JSON do modelo diferem além da tolerância relativa nos números.
+
+    O último bit dos limiares muda de um processador para outro (o log10 do numpy usa instruções diferentes),
+    sem mudar nenhuma previsão. Por isso o CI compara este arquivo assim, e não byte a byte.
+    """
+    if isinstance(antigo, bool) or isinstance(novo, bool):
+        return [] if antigo == novo else [caminho or "/"]
+    if isinstance(antigo, int | float) and isinstance(novo, int | float):
+        return [] if math.isclose(antigo, novo, rel_tol=tolerancia, abs_tol=1e-12) else [caminho or "/"]
+    if isinstance(antigo, dict) and isinstance(novo, dict):
+        if antigo.keys() != novo.keys():
+            return [f"{caminho}/ (chaves)"]
+        return [d for k in antigo for d in diferencas(antigo[k], novo[k], tolerancia, f"{caminho}/{k}")]
+    if isinstance(antigo, list) and isinstance(novo, list):
+        if len(antigo) != len(novo):
+            return [f"{caminho}/ (tamanho)"]
+        return [d for i, (a, b) in enumerate(zip(antigo, novo, strict=True)) for d in diferencas(a, b, tolerancia, f"{caminho}/{i}")]
+    return [] if antigo == novo else [caminho or "/"]

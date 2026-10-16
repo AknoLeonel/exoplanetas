@@ -108,3 +108,29 @@ def test_variavel_categorica_nao_e_exportada():
 
     with pytest.raises(ValueError, match="categóricas"):
         modelo_web.arvore(Falso())
+
+
+def test_diferencas_tolera_o_ultimo_bit_e_aponta_o_resto():
+    antigo = {"a": [1.0, 2.0, True], "b": {"c": "x", "d": 3}}
+    assert modelo_web.diferencas(antigo, {"a": [1.0 + 1e-15, 2.0, True], "b": {"c": "x", "d": 3}}) == []
+    assert modelo_web.diferencas(antigo, {"a": [1.1, 2.0, True], "b": {"c": "x", "d": 3}}) == ["/a/0"]
+    assert modelo_web.diferencas(antigo, {"a": [1.0, 2.0, False], "b": {"c": "x", "d": 3}}) == ["/a/2"]
+    assert modelo_web.diferencas(antigo, {"a": [1.0, 2.0], "b": {"c": "x", "d": 3}}) == ["/a/ (tamanho)"]
+    assert modelo_web.diferencas(antigo, {"a": [1.0, 2.0, True], "b": {"c": "y", "d": 3}}) == ["/b/c"]
+    assert modelo_web.diferencas(antigo, {"a": [1.0, 2.0, True]}) == ["/ (chaves)"]
+    assert modelo_web.diferencas(1, "1") == ["/"]
+
+
+def test_comparar_modelo_pela_linha_de_comando(tmp_path, capsys):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("comparar_modelo", dados.RAIZ / "scripts" / "comparar_modelo.py")
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+    a, b = tmp_path / "a.json", tmp_path / "b.json"
+    a.write_text(json.dumps({"limiar": [1.39794000867203]}), encoding="utf-8")
+    b.write_text(json.dumps({"limiar": [1.39794000867204]}), encoding="utf-8")
+    assert script.main(str(a), str(b)) == 0
+    b.write_text(json.dumps({"limiar": [1.5]}), encoding="utf-8")
+    assert script.main(str(a), str(b)) == 1
+    assert "difere: /limiar/0" in capsys.readouterr().out
