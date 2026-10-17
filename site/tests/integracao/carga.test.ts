@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { aoMudarProgresso, type EstadoDoProgresso } from "../../src/data/acompanhar";
 import * as telemetria from "../../src/telemetry";
-import { carregarSecao, importarModulo, iniciarSecao } from "../../src/ui/carga";
+import { carregarSecao, ehFalhaDeArquivo, importarModulo, iniciarSecao } from "../../src/ui/carga";
 import { h } from "../../src/ui/dom";
 import { criarSecao, esperar, esperarAte } from "./fixtures";
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   document.body.innerHTML = "";
+  sessionStorage.clear();
   vi.restoreAllMocks();
 });
 
@@ -164,9 +166,10 @@ describe("iniciarSecao", () => {
   it("se o código não chegar, mostra erro com 'Tentar de novo' em vez de deixar o skeleton parado", async () => {
     const host = criarSecao();
     const espiao = vi.spyOn(telemetria, "erro");
-    const importar = vi.fn().mockRejectedValueOnce(new Error("Failed to fetch dynamically imported module"));
+    const importar = vi.fn().mockRejectedValueOnce(new Error("sem rede"));
     await iniciarSecao(host, "explorador", importar);
-    expect(host.querySelector(".erro")?.textContent).toContain("Failed to fetch dynamically imported module");
+    expect(host.querySelector(".erro")?.textContent).toContain("sem rede");
+    expect(host.querySelector(".erro button")?.textContent).toBe("Tentar de novo");
     expect(host.querySelector("[data-skeleton]")).toBeNull();
     expect(host.getAttribute("aria-busy")).toBe("false");
     expect(espiao).toHaveBeenCalledWith(expect.any(Error), { secao: "explorador", etapa: "modulo" });
@@ -201,5 +204,81 @@ describe("iniciarSecao", () => {
     const host = criarSecao();
     await iniciarSecao(host, "t", () => Promise.reject("x"));
     expect(host.querySelector(".erro")?.textContent).toContain("Erro desconhecido.");
+  });
+
+  describe("arquivo que sumiu depois de um deploy novo", () => {
+    const sumiu = () => new Error("Failed to fetch dynamically imported module: https://x/assets/ml-ANTIGO.js");
+
+    it("reconhece as mensagens dos três navegadores e ignora o resto", () => {
+      expect(ehFalhaDeArquivo(sumiu())).toBe(true);
+      expect(ehFalhaDeArquivo(new Error("error loading dynamically imported module"))).toBe(true);
+      expect(ehFalhaDeArquivo(new Error("Importing a module script failed."))).toBe(true);
+      expect(ehFalhaDeArquivo(new Error("sem rede"))).toBe(false);
+      expect(ehFalhaDeArquivo("dynamically imported module")).toBe(false);
+    });
+
+    it("recarrega a página uma vez, sozinha, e mantém o skeleton enquanto isso", async () => {
+      const host = criarSecao();
+      const recarregar = vi.fn();
+      await iniciarSecao(host, "ml", () => Promise.reject(sumiu()), recarregar);
+      expect(recarregar).toHaveBeenCalledOnce();
+      expect(host.querySelector(".erro")).toBeNull();
+      expect(host.querySelector("[data-skeleton]")).not.toBeNull();
+    });
+
+    it("se depois da recarga ainda falha, explica e o botão recarrega em vez de repetir o import", async () => {
+      const host = criarSecao();
+      const recarregar = vi.fn();
+      const importar = vi.fn(() => Promise.reject(sumiu()));
+      await iniciarSecao(host, "ml", importar, recarregar);
+      recarregar.mockClear();
+      const segunda = criarSecao();
+      await iniciarSecao(segunda, "ml", importar, recarregar);
+      expect(recarregar).not.toHaveBeenCalled();
+      expect(segunda.querySelector(".erro")?.textContent).toContain("O site foi atualizado");
+      const botao = segunda.querySelector<HTMLButtonElement>(".erro button") as HTMLButtonElement;
+      expect(botao.textContent).toBe("Recarregar a página");
+      botao.click();
+      expect(recarregar).toHaveBeenCalledOnce();
+      expect(importar).toHaveBeenCalledTimes(2);
+    });
+
+    it("um módulo que carrega com sucesso libera a recarga para o próximo deploy", async () => {
+      sessionStorage.setItem("exoplanetas:recarregou-por-versao-nova", "1");
+      await iniciarSecao(criarSecao(), "ml", async () => ({ montar: async () => {} }));
+      expect(sessionStorage.getItem("exoplanetas:recarregou-por-versao-nova")).toBeNull();
+      const recarregar = vi.fn();
+      await iniciarSecao(criarSecao(), "ml", () => Promise.reject(sumiu()), recarregar);
+      expect(recarregar).toHaveBeenCalledOnce();
+    });
+
+    it("sem sessionStorage não recarrega (evita laço) e mostra o painel", async () => {
+      vi.stubGlobal("sessionStorage", {
+        getItem: () => {
+          throw new Error("bloqueado");
+        },
+        setItem: () => {
+          throw new Error("bloqueado");
+        },
+        removeItem: () => {
+          throw new Error("bloqueado");
+        },
+      });
+      const host = criarSecao();
+      const recarregar = vi.fn();
+      await iniciarSecao(host, "ml", () => Promise.reject(sumiu()), recarregar);
+      expect(recarregar).not.toHaveBeenCalled();
+      expect(host.querySelector(".erro button")?.textContent).toBe("Recarregar a página");
+    });
+
+    it("o botão padrão recarrega a janela", async () => {
+      const recarga = vi.fn();
+      vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, reload: recarga } as Location);
+      sessionStorage.setItem("exoplanetas:recarregou-por-versao-nova", "1");
+      const host = criarSecao();
+      await iniciarSecao(host, "ml", () => Promise.reject(sumiu()));
+      host.querySelector<HTMLButtonElement>(".erro button")?.click();
+      expect(recarga).toHaveBeenCalledOnce();
+    });
   });
 });

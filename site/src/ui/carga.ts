@@ -25,8 +25,8 @@ function atualizarBarra(skeleton: HTMLElement, fracao: number | null): void {
   barra.style.setProperty("--fracao", String(fracao));
 }
 
-function painelDeErro(mensagem: string, tentarDeNovo: () => void): HTMLElement {
-  const botao = h("button", { class: "botao", type: "button" }, "Tentar de novo");
+function painelDeErro(mensagem: string, tentarDeNovo: () => void, rotulo = "Tentar de novo"): HTMLElement {
+  const botao = h("button", { class: "botao", type: "button" }, rotulo);
   botao.addEventListener("click", () => {
     // Um clique só: o painel ainda está saindo e outro clique abriria uma segunda tentativa.
     botao.disabled = true;
@@ -85,14 +85,51 @@ export interface ModuloDeSecao {
   montar(host: HTMLElement): Promise<void>;
 }
 
+/** As mensagens que os navegadores dão quando o arquivo de um `import()` não existe mais (Chrome, Firefox, Safari). */
+const FALHA_DE_ARQUIVO = /dynamically imported module|importing a module script failed|module script failed/i;
+const CHAVE_DA_RECARGA = "exoplanetas:recarregou-por-versao-nova";
+
+export function ehFalhaDeArquivo(e: unknown): boolean {
+  return e instanceof Error && FALHA_DE_ARQUIVO.test(e.message);
+}
+
+/** Recarrega uma vez só por sessão: sem esse guarda, um arquivo que continua faltando viraria um laço de recargas. */
+function recarregarUmaVez(recarregar: () => void): boolean {
+  try {
+    if (sessionStorage.getItem(CHAVE_DA_RECARGA)) return false;
+    sessionStorage.setItem(CHAVE_DA_RECARGA, "1");
+  } catch {
+    return false;
+  }
+  recarregar();
+  return true;
+}
+
+function liberarRecarga(): void {
+  try {
+    sessionStorage.removeItem(CHAVE_DA_RECARGA);
+  } catch {
+    // Sem sessionStorage, a recarga automática simplesmente não acontece.
+  }
+}
+
+export interface ModuloDeSecao {
+  montar(host: HTMLElement): Promise<void>;
+}
+
+const recarregarPagina = (): void => window.location.reload();
+
 /**
- * Baixa o código de uma seção e o monta. Se o código não chegar (rede instável, deploy novo),
- * mostra o mesmo painel de erro com "Tentar de novo" das falhas de dados, em vez de deixar o skeleton parado.
+ * Baixa o código de uma seção e o monta. Se o código não chegar, mostra o mesmo painel de erro com
+ * "Tentar de novo" das falhas de dados, em vez de deixar o skeleton parado.
+ * Se o arquivo sumiu porque saiu um deploy novo (o `index.html` desta aba é antigo), repetir o `import()`
+ * falharia para sempre: a página recarrega uma vez sozinha e, se ainda falhar, o botão recarrega em vez de repetir.
  */
 export async function iniciarSecao(
   host: HTMLElement,
   nome: string,
   importar: () => Promise<ModuloDeSecao>,
+  recarregar: () => void = recarregarPagina,
 ): Promise<void> {
   const skeleton = host.querySelector<HTMLElement>("[data-skeleton]");
   let modulo: ModuloDeSecao;
@@ -100,14 +137,27 @@ export async function iniciarSecao(
     modulo = await importarModulo(importar());
   } catch (e) {
     registrarErro(e, { secao: nome, etapa: "modulo" });
+    const versaoNova = ehFalhaDeArquivo(e);
+    if (versaoNova && recarregarUmaVez(recarregar)) return;
     if (!skeleton) return;
-    const erro = painelDeErro(e instanceof Error ? e.message : "Erro desconhecido.", () => {
-      host.setAttribute("aria-busy", "true");
-      void trocar(host, erro, skeleton).then(() => iniciarSecao(host, nome, importar));
-    });
+    const mensagem = versaoNova
+      ? "O site foi atualizado enquanto esta página estava aberta. Recarregue para pegar a versão nova."
+      : e instanceof Error
+        ? e.message
+        : "Erro desconhecido.";
+    const erro = painelDeErro(
+      mensagem,
+      () => {
+        if (versaoNova) return recarregar();
+        host.setAttribute("aria-busy", "true");
+        void trocar(host, erro, skeleton).then(() => iniciarSecao(host, nome, importar, recarregar));
+      },
+      versaoNova ? "Recarregar a página" : "Tentar de novo",
+    );
     await trocar(host, skeleton, erro);
     host.setAttribute("aria-busy", "false");
     return;
   }
+  liberarRecarga();
   await modulo.montar(host);
 }
