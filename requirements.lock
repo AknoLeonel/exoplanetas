@@ -2,3 +2,5 @@ pandas==3.0.5
 numpy==2.5.3
 scikit-learn==1.9.1
 matplotlib==3.11.2
+astropy==8.0.2
+batman-package==2.5.3
