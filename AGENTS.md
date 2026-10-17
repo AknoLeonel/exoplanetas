@@ -15,6 +15,7 @@ Instruções obrigatórias para qualquer agente de IA (de qualquer modelo ou fer
 - A fonte é o [NASA Exoplanet Archive](https://exoplanetarchive.ipac.caltech.edu), tabela `pscomppars` (um registro por planeta confirmado).
 - Nunca edite `data/exoplanetas.csv` à mão. Ele só muda pelo workflow `dados.yml`, que guarda junto a data da coleta em `data/metadados.json`.
 - Toda análise precisa ser reprodutível com `python -m exoplanetas.pipeline`.
+- **Medição própria:** a lógica fica em `src/exoplanetas/medicao.py` (funções puras, testadas com curvas sintéticas de valores injetados); o download do TESS e do catálogo fica em `scripts/medir_transitos.py`, que só roda pelo workflow `medicao.yml` (o ambiente dos agentes não alcança o MAST). Os valores de referência vêm do NASA Exoplanet Archive na hora da execução, nunca digitados. Medição que discorda do catálogo é revisada por uma pessoa antes de ir para o site.
 
 ## Código
 

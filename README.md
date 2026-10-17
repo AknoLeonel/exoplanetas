@@ -91,12 +91,14 @@ Uma única lei de potência (R ∝ M^0,37) erra porque a física muda com a mass
 ## Como rodar
 
 ```bash
-pip install -r requirements.lock -e ".[dev]"
+pip install -r requirements.lock -e ".[dev,medicao]"
 python -m exoplanetas.pipeline     # gera reports/metricas.json e os gráficos
 pytest                             # testes, com cobertura mínima de 90%
 ```
 
 Para atualizar os dados: Actions → **Coletar dados da NASA** → Run workflow. O workflow abre uma branch com o CSV novo, para revisar por PR.
+
+**Medição própria (em teste):** Actions → **Medição própria de trânsitos** → Run workflow. O robô baixa as curvas de luz do TESS, acha o período por BLS, ajusta o trânsito (Mandel e Agol, com escurecimento de borda) e compara período e Rp/R★ com o NASA Exoplanet Archive, com as incertezas. O resultado sai no resumo do job e no artefato `medicoes.json`; nada é commitado. Critérios do teste de viabilidade na Issue #41.
 
 ## Site interativo
 
@@ -140,11 +142,12 @@ src/exoplanetas/
   dados.py            carregamento, limpeza, seleção sem vazamento, features
   analise.py          agregações da análise exploratória
   modelo.py           modelos, validação agrupada por estrela, importância
+  medicao.py          medição própria de trânsitos: BLS, ajuste do trânsito, comparação com o catálogo
   graficos.py         gráficos em tema claro e escuro
   pipeline.py         roda tudo e grava reports/
 tests/                pytest
 docs/                 checklist de produção (arquitetura, segurança, cache, escala, observabilidade)
-scripts/              coleta da NASA, varredura de segredos e gerador de projeto novo
+scripts/              coleta da NASA, medição de trânsitos do TESS, comparação do modelo, varredura de segredos e gerador de projeto novo
 reports/              metricas.json e figuras
 site/                 site estático (src/lib, data, ui, telemetry), testes e config de qualidade
 vercel.json           build e cabeçalhos do deploy

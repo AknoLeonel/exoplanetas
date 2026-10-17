@@ -1,0 +1,57 @@
+name: Medição própria de trânsitos
+
+# Teste de viabilidade (Issue #41): baixa curvas de luz do TESS, mede período e Rp/R★ e compara com o catálogo.
+# Roda sob demanda e quando a medição muda numa branch. Não commita nada: o resultado fica no resumo
+# do job e no artefato medicoes.json. O job falha se o teste for reprovado.
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - src/exoplanetas/medicao.py
+      - scripts/medir_transitos.py
+      - .github/workflows/medicao.yml
+  workflow_dispatch:
+    inputs:
+      alvos:
+        description: "Planetas separados por vírgula (vazio = os cinco do teste)"
+        required: false
+        default: ""
+      setores:
+        description: "Máximo de setores do TESS por planeta"
+        required: false
+        default: "6"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: medicao-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  medir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.lock -e ".[medicao]" lightkurve==2.5.1
+      - name: Medir os trânsitos
+        env:
+          ALVOS: ${{ inputs.alvos }}
+          SETORES: ${{ inputs.setores || '6' }}
+        run: |
+          if [ -n "$ALVOS" ]; then
+            python scripts/medir_transitos.py --alvos "$ALVOS" --setores "$SETORES" --saida medicoes.json
+          else
+            python scripts/medir_transitos.py --setores "$SETORES" --saida medicoes.json
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: medicoes
+          path: medicoes.json
+          if-no-files-found: warn
