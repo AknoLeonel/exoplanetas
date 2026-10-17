@@ -42,8 +42,11 @@ jobs:
       - name: Pipeline reproduz as métricas do README e os dados do site
         if: hashFiles('data/exoplanetas.csv') != ''
         run: |
+          cp site/public/dados/modelo-raio.json "$RUNNER_TEMP/modelo-versionado.json"
           python -m exoplanetas.pipeline
-          git diff --exit-code -- reports/metricas.json site/public/dados
+          git diff --exit-code -- reports/metricas.json site/public/dados ':(exclude)site/public/dados/modelo-raio.json'
+          # O último bit dos limiares do modelo muda de um processador para outro: este arquivo é comparado com tolerância.
+          python scripts/comparar_modelo.py "$RUNNER_TEMP/modelo-versionado.json" site/public/dados/modelo-raio.json
       - name: Cobertura do Python no Codecov
         uses: codecov/codecov-action@v5
         with:
