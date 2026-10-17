@@ -14,7 +14,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6"]
 # Medição própria de trânsitos (src/exoplanetas/medicao.py). O download das curvas usa também o lightkurve.
-medicao = ["astropy>=6.0", "batman-package>=2.5", "scipy>=1.11"]
+# O batman importa distutils, que saiu do Python 3.12: o setuptools o devolve.
+medicao = ["astropy>=6.0", "batman-package>=2.5", "scipy>=1.11", "setuptools>=69"]
 
 [build-system]
 requires = ["setuptools>=69"]
