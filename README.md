@@ -98,7 +98,7 @@ pytest                             # testes, com cobertura mínima de 90%
 
 Para atualizar os dados: Actions → **Coletar dados da NASA** → Run workflow. O workflow abre uma branch com o CSV novo, para revisar por PR.
 
-**Medição própria (em teste):** Actions → **Medição própria de trânsitos** → Run workflow. O robô baixa as curvas de luz do TESS, acha o período por BLS, ajusta o trânsito (Mandel e Agol, com escurecimento de borda) e compara período e Rp/R★ com o NASA Exoplanet Archive, com as incertezas. O resultado sai no resumo do job e no artefato `medicoes.json`; nada é commitado. Critérios do teste de viabilidade na Issue #41.
+**Medição própria (em teste):** Actions → **Medição própria de trânsitos** → Run workflow. O robô baixa as curvas de luz do TESS, acha o período por BLS, tira a variação da estrela trânsito a trânsito, ajusta o trânsito (Mandel e Agol, com escurecimento de borda), estima a incerteza sorteando trânsitos inteiros (bootstrap) e compara período e Rp/R★ com o NASA Exoplanet Archive, com as incertezas. A densidade da estrela implicada pelo ajuste vai junto, como diagnóstico. O resultado sai no resumo do job e no artefato `medicoes.json`; nada é commitado. Critérios do teste de viabilidade na Issue #41; o diagnóstico da primeira rodada, na #45.
 
 ## Site interativo
 
