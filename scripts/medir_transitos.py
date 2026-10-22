@@ -1,11 +1,13 @@
 """Teste de viabilidade da medição própria (Issue #41): mede trânsitos com as curvas de luz do TESS.
 
-Uso: python scripts/medir_transitos.py [--alvos "WASP-18 b,KELT-11 b"] [--setores 6] [--saida medicoes.json]
+Uso: python scripts/medir_transitos.py [--alvos "WASP-18 b,KELT-11 b"] [--setores 6] [--reamostragens 100]
+                                      [--saida medicoes.json]
 
 Para cada alvo:
 1. lê período e Rp/R★, com as incertezas, na tabela pscomppars do NASA Exoplanet Archive;
 2. baixa as curvas SPOC de 2 minutos do TESS pelo MAST (lightkurve);
-3. tira a tendência da estrela, acha o período por BLS e ajusta o trânsito (src/exoplanetas/medicao.py);
+3. acha o período por BLS, tira a tendência da estrela trânsito a trânsito, ajusta o trânsito e estima a
+   incerteza por bootstrap de trânsitos (src/exoplanetas/medicao.py);
 4. compara com o catálogo.
 
 Grava o resultado em JSON e um resumo em Markdown (no resumo do job, quando roda no GitHub Actions).
@@ -21,7 +23,6 @@ import sys
 import time
 import urllib.parse
 import urllib.request
-from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -47,9 +48,8 @@ COLUNAS = [
     "st_rad",
     "st_raderr1",
     "st_raderr2",
+    "st_mass",
 ]
-# Janela do filtro que tira a tendência da estrela: 0,75 dia em cadência de 2 minutos (ímpar).
-JANELA_DO_FILTRO = 541
 
 
 def montar_url(nomes: list[str]) -> str:
@@ -77,24 +77,22 @@ def baixar(estrela: str, setores: int):
     return curva, lista
 
 
-def medir(nome: str, linha: dict, setores: int) -> dict:
+def medir(nome: str, linha: dict, setores: int, reamostragens: int) -> dict:
     inicio = time.monotonic()
     curva, lista = baixar(linha["hostname"], setores)
-    plana = curva.flatten(window_length=JANELA_DO_FILTRO)
-    periodo = medicao.buscar_periodo(plana.time.value, plana.flux.value)
-    # Segunda passada: a tendência é recalculada sem os trânsitos, para não comer a profundidade.
-    mascara = medicao.mascara_de_transito(curva.time.value, periodo, janela=1.0)
-    plana = curva.flatten(window_length=JANELA_DO_FILTRO, mask=mascara)
-    ajuste = medicao.ajustar_transito(plana.time.value, plana.flux.value, periodo)
+    resultado, _ = medicao.medir(curva.time.value, curva.flux.value, reamostragens=reamostragens)
     return {
         "planeta": nome,
         "estrela": linha["hostname"],
         "setores_tess": lista,
-        "bls": asdict(periodo),
-        "ajuste": ajuste.como_dict(),
-        **medicao.comparar(ajuste, linha),
+        **resultado.como_dict(),
+        **medicao.comparar(resultado, linha),
         "segundos": round(time.monotonic() - inicio, 1),
     }
+
+
+def _ou_traco(valor: float | None, formato: str) -> str:
+    return "—" if valor is None else format(valor, formato)
 
 
 def resumo(resultado: dict) -> str:
@@ -106,19 +104,23 @@ def resumo(resultado: dict) -> str:
         f"Período bate (≤ {medicao.TOLERANCIA_DO_PERIODO:.1%}): {v['periodo_bate']} de {v['alvos']}. "
         f"Rp/R★ bate (≤ {medicao.SIGMAS_DA_RAZAO:g}σ): {v['razao_bate']} de {v['alvos']}. Mínimo: {v['minimo']}.",
         "",
-        "| Planeta | Período medido (d) | Catálogo (d) | Rp/R★ medido | Catálogo | Setores |",
-        "| :-- | --: | --: | --: | --: | :-- |",
+        "Incertezas medidas por bootstrap de trânsitos; Δ em σ combina a nossa com a do catálogo. "
+        "ρ★ é a densidade da estrela implicada pelo ajuste dividida pela do catálogo (diagnóstico, 1 = coerente).",
+        "",
+        "| Planeta | Período medido (d) | Catálogo (d) | Rp/R★ medido | Catálogo | Δ (σ) | ρ★ | Trânsitos | Setores |",
+        "| :-- | --: | --: | --: | --: | --: | --: | --: | :-- |",
     ]
     for c in resultado["alvos"]:
         if "erro" in c:
-            linhas.append(f"| {c['planeta']} | erro: {c['erro']} | | | | |")
+            linhas.append(f"| {c['planeta']} | erro: {c['erro']} | | | | | | | |")
             continue
-        p, r = c["periodo"], c["razao_de_raios"]
+        p, r, rho = c["periodo"], c["razao_de_raios"], c["densidade_estelar"]
         catalogo_r = "—" if r["catalogo"] is None else f"{r['catalogo']:.5f} ± {r['sigma_catalogo'] or 0:.5f}"
         linhas.append(
             f"| {c['planeta']} | {p['medido']:.7f} ± {p['sigma']:.1e} {'✅' if p['bate'] else '❌'} | {p['catalogo']} "
             f"| {r['medido']:.5f} ± {r['sigma']:.5f} {'✅' if r['bate'] else '❌'} | {catalogo_r} "
-            f"| {', '.join(map(str, c['setores_tess']))} |"
+            f"| {_ou_traco(r['diferenca_em_sigmas'], '+.1f')} | {_ou_traco(rho['razao'], '.2f')} "
+            f"| {c['transitos']} | {', '.join(map(str, c['setores_tess']))} |"
         )
     return "\n".join(linhas) + "\n"
 
@@ -127,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     argumentos = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     argumentos.add_argument("--alvos", default=",".join(ALVOS))
     argumentos.add_argument("--setores", type=int, default=6, help="máximo de setores do TESS por alvo")
+    argumentos.add_argument("--reamostragens", type=int, default=medicao.REAMOSTRAGENS, help="sorteios do bootstrap")
     argumentos.add_argument("--saida", default="medicoes.json")
     a = argumentos.parse_args(argv)
     nomes = [n.strip() for n in a.alvos.split(",") if n.strip()]
@@ -136,7 +139,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             if nome not in catalogo:
                 raise KeyError("planeta não encontrado no pscomppars")
-            alvos.append(medir(nome, catalogo[nome], a.setores))
+            alvos.append(medir(nome, catalogo[nome], a.setores, a.reamostragens))
         except Exception as erro:  # um alvo com problema não derruba os outros
             alvos.append({"planeta": nome, "erro": f"{type(erro).__name__}: {erro}"})
         print(json.dumps(alvos[-1], ensure_ascii=False), flush=True)
